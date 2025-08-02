@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clan Member Highest Ranks</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f0f0f0; color: #333; padding: 20px; }
+        h1 { text-align: center; }
+        #loader { text-align: center; font-size: 1.2em; }
+        table { width: 100%; max-width: 600px; margin: 20px auto; border-collapse: collapse; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background-color: white; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #555; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<h1>Clan Member Highest Attained Rank</h1>
+<div id="loader">Fetching and updating records...</div>
+<table id="member-table" style="display:none;">
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>Highest Rank</th>
+    </tr>
+    </thead>
+    <tbody id="member-list"></tbody>
+</table>
+
+<script>
+    const PROXY_URL = 'http://localhost:3000';
+
+    async function getTrackedData() {
+        try {
+            const response = await fetch(`${PROXY_URL}/tracked-clan-data`);
+            const memberData = await response.json();
+            if (!response.ok) throw new Error(memberData.error || 'An unknown error occurred.');
+            displayData(memberData);
+        } catch (error) {
+            document.getElementById('loader').innerText = `Error: ${error.message}`;
+            console.error('Failed to load tracked data:', error);
+        }
+    }
+
+    function displayData(members) {
+        const tableBody = document.getElementById('member-list');
+        const loader = document.getElementById('loader');
+        const table = document.getElementById('member-table');
+        tableBody.innerHTML = '';
+
+        members.forEach(member => {
+            const row = document.createElement('tr');
+            const nameCell = document.createElement('td');
+            const rankCell = document.createElement('td');
+
+            // --- MODIFICATION: Create a link for the player name and tag ---
+            const playerLink = document.createElement('a');
+            const playerTag = member.tag.replace('#', ''); // Ensure tag has no # for the URL
+            playerLink.href = `player.html?tag=${playerTag}`;
+            playerLink.textContent = `${member.name} (${member.tag})`; // Display name and tag
+            nameCell.appendChild(playerLink);
+
+            rankCell.innerHTML = `<b>${member.highestRoleName}</b>`;
+
+            row.appendChild(nameCell);
+            row.appendChild(rankCell);
+            tableBody.appendChild(row);
+        });
+
+        loader.style.display = 'none';
+        table.style.display = 'table';
+    }
+
+    window.onload = getTrackedData;
+</script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Stats</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f0f0f0; color: #333; padding: 20px; }
+        .container { max-width: 600px; margin: 20px auto; padding: 20px; background-color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; }
+        h1 { text-align: center; font-size: 1.5em; }
+        h2 { font-size: 1.2em; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 30px;}
+        p { font-size: 1.1em; line-height: 1.6; }
+        strong { color: #333; }
+        .back-link { display: block; text-align: center; margin-top: 20px; }
+        #loader { text-align: center; font-size: 1.2em; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 id="player-name">Player Stats</h1>
+    <div id="loader">Loading stats...</div>
+    <div id="stats-content" style="display:none;">
+    </div>
+    <a href="index.html" class="back-link">← Back to Clan List</a>
+</div>
+
+<script>
+    const PROXY_URL = 'http://localhost:3000';
+
+    async function loadPlayerStats() {
+        const loader = document.getElementById('loader');
+        const statsContent = document.getElementById('stats-content');
+
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const playerTag = params.get('tag');
+
+            if (!playerTag) {
+                throw new Error('Player tag not found in URL.');
+            }
+
+            const response = await fetch(`${PROXY_URL}/player/${playerTag}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Could not fetch player stats.');
+            }
+
+            document.getElementById('player-name').textContent = `${data.name} (${data.tag})`;
+
+            // --- MODIFICATION: Display new lifetime stats ---
+            statsContent.innerHTML = `
+                    <h2>General</h2>
+                    <p><strong>Town Hall:</strong> ${data.townHallLevel}</p>
+                    <p><strong>Experience Level:</strong> ${data.expLevel}</p>
+                    <p><strong>Trophies:</strong> ${data.trophies.toLocaleString()} 🏆</p>
+                    <p><strong>Personal Best:</strong> ${data.bestTrophies.toLocaleString()} 🏆</p>
+                    <p><strong>War Stars:</strong> ${data.warStars.toLocaleString()} ⭐</p>
+
+                    <h2>Donations</h2>
+                    <p><strong>Season Donations:</strong> ${data.donations.toLocaleString()}</p>
+                    <p><strong>Season Received:</strong> ${data.donationsReceived.toLocaleString()}</p>
+                    <p><strong>Troop Donations (Lifetime):</strong> ${data.troopDonations.toLocaleString()}</p>
+                    <p><strong>Spell Donations (Lifetime):</strong> ${data.spellDonations.toLocaleString()}</p>
+                    <p><strong>Siege Machine Donations (Lifetime):</strong> ${data.siegeDonations.toLocaleString()}</p>
+                `;
+
+            loader.style.display = 'none';
+            statsContent.style.display = 'block';
+
+        } catch (error) {
+            loader.innerText = `Error: ${error.message}`;
+        }
+    }
+
+    window.onload = loadPlayerStats;
+</script>
+</body>
+</html>
