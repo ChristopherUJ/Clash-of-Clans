@@ -6,20 +6,23 @@
     <title>Clan Members</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Lilita+One&family=Lato&display=swap');
+
         :root {
             --coc-gold: #fde068;
-            --coc-dark-blue: #1a2c48;
             --coc-light-text: #e0e0e0;
-            --coc-dark-panel: rgba(10, 20, 35, 0.7);
+            /* MODIFIED: Changed panel color to a dark gray */
+            --coc-dark-panel: #111;
         }
+
         body {
             font-family: 'Lato', sans-serif;
-            background-color: var(--coc-dark-blue);
-            background-image: linear-gradient(180deg, #283e63 0%, #1a2c48 100%);
+            /* MODIFIED: Changed background to solid black */
+            background-color: #000;
             color: var(--coc-light-text);
             padding: 20px;
             min-height: 100vh;
         }
+
         h1, th {
             font-family: 'Lilita One', cursive;
             color: var(--coc-gold);
@@ -41,7 +44,7 @@
         th, td {
             padding: 12px 15px;
             text-align: left;
-            border-bottom: 1px solid #4a5c78;
+            border-bottom: 1px solid #444; /* Darker border for contrast */
             vertical-align: middle;
         }
         th { background-color: rgba(0,0,0,0.3); }
@@ -70,6 +73,7 @@
     <tbody id="member-list"></tbody>
 </table>
 <script>
+    // --- JavaScript code remains exactly the same ---
     let allMembers = [];
     let sortState = { column: 'trophies', order: 'desc' };
     async function getTrackedData() {

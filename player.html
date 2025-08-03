@@ -5,20 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Player Stats</title>
     <style>
-        /* MODIFIED: Imported the 'Lilita One' font */
         @import url('https://fonts.googleapis.com/css2?family=Lilita+One&family=Lato&display=swap');
 
         :root {
             --coc-gold: #fde068;
-            --coc-dark-blue: #1a2c48;
             --coc-light-text: #e0e0e0;
-            --coc-dark-panel: rgba(10, 20, 35, 0.7);
+            /* MODIFIED: Changed panel color to a dark gray */
+            --coc-dark-panel: #111;
         }
 
         body {
             font-family: 'Lato', sans-serif;
-            background-color: var(--coc-dark-blue);
-            background-image: linear-gradient(180deg, #283e63 0%, #1a2c48 100%);
+            /* MODIFIED: Changed background to solid black */
+            background-color: #000;
             color: var(--coc-light-text);
             padding: 20px;
             min-height: 100vh;
@@ -35,7 +34,6 @@
         }
 
         h1, h2, .back-link {
-            /* MODIFIED: Using the new font */
             font-family: 'Lilita One', cursive;
             color: var(--coc-gold);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
@@ -43,7 +41,7 @@
         }
 
         h1 { text-align: center; font-size: 1.5em; }
-        h2 { font-size: 1.2em; border-bottom: 1px solid #4a5c78; padding-bottom: 10px; margin-top: 30px;}
+        h2 { font-size: 1.2em; border-bottom: 1px solid #444; padding-bottom: 10px; margin-top: 30px;}
 
         p { font-size: 1.1em; line-height: 1.6; }
         strong { color: var(--coc-gold); font-weight: normal; }
