@@ -97,17 +97,27 @@ app.get('/update-data', async (req, res) => {
 // =================================================================
 //  ENDPOINTS TO SERVE CACHED DATA
 // =================================================================
+// in server.js
+
 app.get('/tracked-clan-data', (req, res) => {
-    const sql = "SELECT * FROM players";
+    // The SQL query now sorts by trophies in descending order (this will be our default)
+    const sql = "SELECT * FROM players ORDER BY trophies DESC";
+
     db.all(sql, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: 'Failed to read database.' });
+        if (err) {
+            return res.status(500).json({ error: 'Failed to read database.' });
+        }
+
         const responseData = rows.map(player => ({
             tag: player.tag,
             name: player.name,
+            trophies: player.trophies,
             currentRoleName: getRoleName(player.role),
             highestRoleName: getRoleName(player.highestRole),
+            // ADDED: A numeric value for sorting by rank
             sortOrder: roleHierarchy[player.highestRole]
-        })).sort((a, b) => b.sortOrder - a.sortOrder);
+        }));
+
         res.json(responseData);
     });
 });
