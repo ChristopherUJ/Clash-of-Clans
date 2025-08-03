@@ -46,7 +46,6 @@
         td:first-child { text-align: left; }
         th { background-color: rgba(0,0,0,0.3); }
         .missed-attacks { color: var(--coc-red); font-weight: bold; }
-        /* --- NEW STYLES for Sorting --- */
         .sortable { cursor: pointer; user-select: none; }
         .sortable:hover { background-color: rgba(255,255,255,0.1); }
         .sortable.sorted-asc::after { content: ' ▲'; }
@@ -72,31 +71,35 @@
     <tbody id="cwl-list"></tbody>
 </table>
 <script>
-    let allPlayers = []; // Store the original fetched data
-    let sortState = { column: 'netStars', order: 'desc' }; // Default sort state
+    let allPlayers = [];
+    let sortState = { column: 'netStars', order: 'desc' };
 
     async function getCwlData() {
         try {
             const response = await fetch(`/cwl-stats`);
             allPlayers = await response.json();
             if (!response.ok) throw new Error(allPlayers.error || 'An unknown error occurred.');
-            renderTable(); // Initial render with default sort
+            renderTable();
         } catch (error) {
             document.getElementById('loader').innerText = `Error: ${error.message}`;
         }
     }
 
     function renderTable() {
-        // Sorting logic
+        // --- MODIFIED SORTING LOGIC ---
         allPlayers.sort((a, b) => {
             let valA, valB;
-            // Use the data-column attribute from the th to get the right value
             const column = sortState.column;
 
             if (column === 'name') {
                 valA = a.name.toLowerCase();
                 valB = b.name.toLowerCase();
+            } else if (column === 'avgDestruction') {
+                // This is the fix: convert the string back to a number for sorting
+                valA = parseFloat(a.avgDestruction);
+                valB = parseFloat(b.avgDestruction);
             } else {
+                // All other columns are already numbers
                 valA = a[column];
                 valB = b[column];
             }
