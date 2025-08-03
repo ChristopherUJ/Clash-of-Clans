@@ -11,38 +11,14 @@
             --coc-light-text: #e0e0e0;
             --coc-dark-panel: #111;
         }
-        body {
-            font-family: 'Lato', sans-serif;
-            background-color: #000;
-            color: var(--coc-light-text);
-            padding: 20px;
-            min-height: 100vh;
-        }
-        h1, th {
-            font-family: 'Lilita One', cursive;
-            color: var(--coc-gold);
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            letter-spacing: 1px;
-        }
+        body { font-family: 'Lato', sans-serif; background-color: #000; color: var(--coc-light-text); padding: 20px; min-height: 100vh; }
+        h1, th { font-family: 'Lilita One', cursive; color: var(--coc-gold); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); letter-spacing: 1px; }
         h1 { text-align: center; }
+        .nav-link { display: block; text-align: center; margin-bottom: 20px; color: #87cefa; font-family: 'Lilita One', cursive; font-size: 1.2em; text-decoration: none; }
+        .nav-link:hover { text-decoration: underline; }
         #loader { text-align: center; font-size: 1.2em; }
-        table {
-            width: 100%;
-            max-width: 800px;
-            margin: 20px auto;
-            border-collapse: collapse;
-            background-color: var(--coc-dark-panel);
-            border: 2px solid var(--coc-gold);
-            border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
-        }
-        th, td {
-            /* MODIFIED: Slightly reduced default padding */
-            padding: 10px 12px;
-            text-align: left;
-            border-bottom: 1px solid #444;
-            vertical-align: middle;
-        }
+        table { width: 100%; max-width: 800px; margin: 20px auto; border-collapse: collapse; background-color: var(--coc-dark-panel); border: 2px solid var(--coc-gold); border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #444; vertical-align: middle; }
         th { background-color: rgba(0,0,0,0.3); }
         a { color: #87cefa; text-decoration: none; }
         a:hover { text-decoration: underline; }
@@ -53,21 +29,12 @@
         .sortable:hover { background-color: rgba(255,255,255,0.1); }
         .sortable.sorted-asc::after { content: ' ▲'; }
         .sortable.sorted-desc::after { content: ' ▼'; }
-
-        /* --- NEW: Mobile Styles --- */
         @media (max-width: 600px) {
             body { padding: 5px; }
             h1 { font-size: 1.8em; }
             table { max-width: 100%; font-size: 0.9em; }
-            th, td {
-                padding: 8px 5px; /* Further reduce padding on mobile */
-                line-height: 1.2;
-            }
-            .player-tag { /* New style to stack name and tag */
-                display: block;
-                font-size: 0.8em;
-                color: #aaa;
-            }
+            th, td { padding: 8px 5px; line-height: 1.2; }
+            .player-tag { display: block; font-size: 0.8em; color: #aaa; }
         }
     </style>
 </head>
@@ -119,35 +86,44 @@
             }
         });
     }
+    // --- MODIFIED FUNCTION ---
     function displayData(members) {
         const tableBody = document.getElementById('member-list');
-        const loader = document.getElementById('loader');
-        const table = document.getElementById('member-table');
         tableBody.innerHTML = '';
         members.forEach(member => {
             const row = document.createElement('tr');
             const nameCell = document.createElement('td');
             const trophiesCell = document.createElement('td');
             const rankCell = document.createElement('td');
-            rankCell.classList.add('rank-cell');
+
+            // Build Name cell safely to prevent HTML injection issues
             const playerLink = document.createElement('a');
             playerLink.href = `/player.html?tag=${member.tag.replace('#', '')}`;
-            // MODIFIED: Wrapped tag in a span for mobile styling
-            playerLink.innerHTML = `${member.name} <span class="player-tag">(${member.tag})</span>`;
+            const nameText = document.createTextNode(`${member.name} `);
+            const tagSpan = document.createElement('span');
+            tagSpan.className = 'player-tag';
+            tagSpan.textContent = `(${member.tag})`;
+            playerLink.appendChild(nameText);
+            playerLink.appendChild(tagSpan);
             nameCell.appendChild(playerLink);
+
+            // Build Trophies and Rank cells
             trophiesCell.textContent = member.trophies.toLocaleString();
+            rankCell.classList.add('rank-cell');
             let rankHtml = `<span class="rank-highest"><b>${member.highestRoleName}</b></span>`;
             if (member.currentRoleName !== member.highestRoleName) {
                 rankHtml += `<span class="rank-current"><b>${member.currentRoleName}</b> (Current)</span>`;
             }
             rankCell.innerHTML = rankHtml;
+
+            // Append all cells in order
             row.appendChild(trophiesCell);
             row.appendChild(nameCell);
             row.appendChild(rankCell);
             tableBody.appendChild(row);
         });
-        loader.style.display = 'none';
-        table.style.display = 'table';
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('member-table').style.display = 'table';
     }
     document.querySelectorAll('th.sortable').forEach(th => {
         th.addEventListener('click', () => {

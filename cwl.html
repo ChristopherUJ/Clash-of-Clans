@@ -12,42 +12,14 @@
             --coc-dark-panel: #111;
             --coc-red: #ff6b6b;
         }
-        body {
-            font-family: 'Lato', sans-serif;
-            background-color: #000;
-            color: var(--coc-light-text);
-            padding: 20px;
-            min-height: 100vh;
-        }
-        h1, th {
-            font-family: 'Lilita One', cursive;
-            color: var(--coc-gold);
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            letter-spacing: 1px;
-        }
+        body { font-family: 'Lato', sans-serif; background-color: #000; color: var(--coc-light-text); padding: 20px; min-height: 100vh; }
+        h1, th { font-family: 'Lilita One', cursive; color: var(--coc-gold); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); letter-spacing: 1px; }
         h1 { text-align: center; }
-        .nav-link {
-            display: block; text-align: center; margin-bottom: 20px; color: #87cefa;
-            font-family: 'Lilita One', cursive; font-size: 1.2em; text-decoration: none;
-        }
+        .nav-link { display: block; text-align: center; margin-bottom: 20px; color: #87cefa; font-family: 'Lilita One', cursive; font-size: 1.2em; text-decoration: none; }
         .nav-link:hover { text-decoration: underline; }
         #loader { text-align: center; font-size: 1.2em; }
-        table {
-            width: 100%;
-            max-width: 1000px;
-            margin: 20px auto;
-            border-collapse: collapse;
-            background-color: var(--coc-dark-panel);
-            border: 2px solid var(--coc-gold);
-            border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
-        }
-        th, td {
-            /* MODIFIED: Slightly reduced default padding */
-            padding: 10px 12px;
-            text-align: center;
-            border-bottom: 1px solid #444;
-        }
+        table { width: 100%; max-width: 1000px; margin: 20px auto; border-collapse: collapse; background-color: var(--coc-dark-panel); border: 2px solid var(--coc-gold); border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #444; }
         td:first-child { text-align: left; }
         th { background-color: rgba(0,0,0,0.3); }
         .missed-attacks { color: var(--coc-red); font-weight: bold; }
@@ -55,17 +27,12 @@
         .sortable:hover { background-color: rgba(255,255,255,0.1); }
         .sortable.sorted-asc::after { content: ' ▲'; }
         .sortable.sorted-desc::after { content: ' ▼'; }
-
-        /* --- NEW: Mobile Styles --- */
         @media (max-width: 600px) {
             body { padding: 5px; }
             h1 { font-size: 1.5em; }
             .nav-link { font-size: 1em; }
             table { max-width: 100%; font-size: 0.8em; }
-            th, td {
-                padding: 6px 3px; /* Further reduce cell padding on mobile */
-                line-height: 1.2;
-            }
+            th, td { padding: 6px 3px; line-height: 1.2; }
         }
     </style>
 </head>
@@ -88,7 +55,6 @@
     <tbody id="cwl-list"></tbody>
 </table>
 <script>
-    // --- JavaScript code remains exactly the same ---
     let allPlayers = [];
     let sortState = { column: 'netStars', order: 'desc' };
     async function getCwlData() {
@@ -128,22 +94,47 @@
             }
         });
     }
+    // --- MODIFIED FUNCTION ---
     function displayData(players) {
         const tableBody = document.getElementById('cwl-list');
         tableBody.innerHTML = '';
         players.forEach(player => {
             const row = document.createElement('tr');
+
+            // Create each cell programmatically for safety and clarity
             const nameCell = document.createElement('td');
-            nameCell.textContent = player.name;
+            nameCell.textContent = player.name; // The safe way
+
+            const attacksCell = document.createElement('td');
+            attacksCell.textContent = player.attacks;
+
+            const missedCell = document.createElement('td');
+            missedCell.textContent = player.missedAttacks;
+            if (player.missedAttacks > 0) {
+                missedCell.classList.add('missed-attacks');
+            }
+
+            const earnedCell = document.createElement('td');
+            earnedCell.textContent = player.stars;
+
+            const concededCell = document.createElement('td');
+            concededCell.textContent = player.starsConceded;
+
+            const netCell = document.createElement('td');
+            netCell.innerHTML = `<b>${player.netStars}</b>`;
+
+            const avgCell = document.createElement('td');
+            avgCell.textContent = `${player.avgDestruction}%`;
+
+            // Append all cells in order
             row.appendChild(nameCell);
-            row.innerHTML += `
-                    <td>${player.attacks}</td>
-                    <td class="${player.missedAttacks > 0 ? 'missed-attacks' : ''}">${player.missedAttacks}</td>
-                    <td>${player.stars}</td>
-                    <td>${player.starsConceded}</td>
-                    <td><b>${player.netStars}</b></td>
-                    <td>${player.avgDestruction}%</td>
-                `;
+            row.appendChild(attacksCell);
+            row.appendChild(missedCell);
+            row.appendChild(earnedCell);
+            row.appendChild(concededCell);
+            row.appendChild(netCell);
+            row.appendChild(avgCell);
+
             tableBody.appendChild(row);
         });
         document.getElementById('loader').style.display = 'none';
