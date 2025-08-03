@@ -12,14 +12,37 @@
             --coc-dark-panel: #111;
             --coc-red: #ff6b6b;
         }
-        body { font-family: 'Lato', sans-serif; background-color: #000; color: var(--coc-light-text); padding: 20px; min-height: 100vh; }
-        h1, th { font-family: 'Lilita One', cursive; color: var(--coc-gold); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); letter-spacing: 1px; }
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #000;
+            color: var(--coc-light-text);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        h1, th {
+            font-family: 'Lilita One', cursive;
+            color: var(--coc-gold);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            letter-spacing: 1px;
+        }
         h1 { text-align: center; }
-        .nav-link { display: block; text-align: center; margin-bottom: 20px; color: #87cefa; font-family: 'Lilita One', cursive; font-size: 1.2em; text-decoration: none; }
+        .nav-link {
+            display: block; text-align: center; margin-bottom: 20px; color: #87cefa;
+            font-family: 'Lilita One', cursive; font-size: 1.2em; text-decoration: none;
+        }
         .nav-link:hover { text-decoration: underline; }
         #loader { text-align: center; font-size: 1.2em; }
-        table { width: 100%; max-width: 1000px; margin: 20px auto; border-collapse: collapse; background-color: var(--coc-dark-panel); border: 2px solid var(--coc-gold); border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
-        th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #444; }
+        table {
+            width: 100%;
+            max-width: 1000px;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background-color: var(--coc-dark-panel);
+            border: 2px solid var(--coc-gold);
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+        th, td { padding: 12px 15px; text-align: center; border-bottom: 1px solid #444; }
         td:first-child { text-align: left; }
         th { background-color: rgba(0,0,0,0.3); }
         .missed-attacks { color: var(--coc-red); font-weight: bold; }
@@ -46,9 +69,9 @@
         <th class="sortable" data-column="name">Player</th>
         <th class="sortable" data-column="attacks">Attacks</th>
         <th class="sortable" data-column="missedAttacks">Missed</th>
-        <th class="sortable" data-column="stars">⭐ Earned</th>
+        <th class="sortable sorted-desc" data-column="stars">⭐ Earned</th>
         <th class="sortable" data-column="starsConceded">⭐ Conceded</th>
-        <th class="sortable sorted-desc" data-column="netStars">Net ⭐</th>
+        <th class="sortable" data-column="netStars">Net ⭐</th>
         <th class="sortable" data-column="avgDestruction">Avg %</th>
     </tr>
     </thead>
@@ -56,7 +79,9 @@
 </table>
 <script>
     let allPlayers = [];
-    let sortState = { column: 'netStars', order: 'desc' };
+    // MODIFIED: Changed default sort column to 'stars'
+    let sortState = { column: 'stars', order: 'desc' };
+
     async function getCwlData() {
         try {
             const response = await fetch(`/cwl-stats`);
@@ -65,6 +90,7 @@
             renderTable();
         } catch (error) { document.getElementById('loader').innerText = `Error: ${error.message}`; }
     }
+
     function renderTable() {
         allPlayers.sort((a, b) => {
             let valA, valB;
@@ -86,6 +112,7 @@
         updateSortHeaders();
         displayData(allPlayers);
     }
+
     function updateSortHeaders() {
         document.querySelectorAll('th.sortable').forEach(th => {
             th.classList.remove('sorted-asc', 'sorted-desc');
@@ -94,52 +121,31 @@
             }
         });
     }
-    // --- MODIFIED FUNCTION ---
+
     function displayData(players) {
         const tableBody = document.getElementById('cwl-list');
         tableBody.innerHTML = '';
         players.forEach(player => {
             const row = document.createElement('tr');
-
-            // Create each cell programmatically for safety and clarity
             const nameCell = document.createElement('td');
-            nameCell.textContent = player.name; // The safe way
-
-            const attacksCell = document.createElement('td');
-            attacksCell.textContent = player.attacks;
-
-            const missedCell = document.createElement('td');
-            missedCell.textContent = player.missedAttacks;
-            if (player.missedAttacks > 0) {
-                missedCell.classList.add('missed-attacks');
-            }
-
-            const earnedCell = document.createElement('td');
-            earnedCell.textContent = player.stars;
-
-            const concededCell = document.createElement('td');
-            concededCell.textContent = player.starsConceded;
-
-            const netCell = document.createElement('td');
-            netCell.innerHTML = `<b>${player.netStars}</b>`;
-
-            const avgCell = document.createElement('td');
-            avgCell.textContent = `${player.avgDestruction}%`;
-
-            // Append all cells in order
+            nameCell.textContent = player.name;
             row.appendChild(nameCell);
-            row.appendChild(attacksCell);
-            row.appendChild(missedCell);
-            row.appendChild(earnedCell);
-            row.appendChild(concededCell);
-            row.appendChild(netCell);
-            row.appendChild(avgCell);
+
+            row.innerHTML += `
+                    <td>${player.attacks}</td>
+                    <td class="${player.missedAttacks > 0 ? 'missed-attacks' : ''}">${player.missedAttacks}</td>
+                    <td>${player.stars}</td>
+                    <td>${player.starsConceded}</td>
+                    <td><b>${player.netStars}</b></td>
+                    <td>${player.avgDestruction}%</td>
+                `;
 
             tableBody.appendChild(row);
         });
         document.getElementById('loader').style.display = 'none';
         document.getElementById('cwl-table').style.display = 'table';
     }
+
     document.querySelectorAll('th.sortable').forEach(th => {
         th.addEventListener('click', () => {
             const column = th.dataset.column;
@@ -152,6 +158,7 @@
             renderTable();
         });
     });
+
     window.onload = getCwlData;
 </script>
 </body>
