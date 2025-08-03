@@ -139,6 +139,13 @@ app.get('/player/:playerTag', (req, res) => {
 // =================================================================
 app.get('/cwl-stats', async (req, res) => {
     try {
+        // --- NEW: First, get the list of current clan members ---
+        const currentClanRes = await fetch(`${COC_API_BASE_URL}/clans/%23${COC_CLAN_TAG.replace('#', '')}`, {
+            headers: { 'Authorization': `Bearer ${COC_API_KEY}` }
+        });
+        const currentClanData = await currentClanRes.json();
+        const currentMemberTags = new Set(currentClanData.memberList.map(m => m.tag));
+
         // 1. Get the current CWL group info to find all the war tags for the week
         const groupRes = await fetch(`${COC_API_BASE_URL}/clans/%23${COC_CLAN_TAG.replace('#', '')}/currentwar/leaguegroup`, {
             headers: { 'Authorization': `Bearer ${COC_API_KEY}` }
@@ -155,7 +162,7 @@ app.get('/cwl-stats', async (req, res) => {
         // 2. Create a list of promises to fetch every war in the week
         const warPromises = groupData.rounds
             .flatMap(round => round.warTags)
-            .filter(tag => tag !== '#0') // Filter out empty war tags
+            .filter(tag => tag !== '#0')
             .map(warTag =>
                 fetch(`${COC_API_BASE_URL}/clanwarleagues/wars/%23${warTag.replace('#', '')}`, {
                     headers: { 'Authorization': `Bearer ${COC_API_KEY}` }
@@ -168,27 +175,20 @@ app.get('/cwl-stats', async (req, res) => {
         const playerStats = {};
 
         for (const war of allWarData) {
-            if (war.state === 'notInWar') continue; // Skip wars that haven't started
+            if (war.state === 'notInWar') continue;
 
             const ourClan = war.clan.tag === `#${COC_CLAN_TAG}` ? war.clan : war.opponent;
             const enemyClan = war.clan.tag !== `#${COC_CLAN_TAG}` ? war.clan : war.opponent;
 
-            // Initialize players if they don't exist in our stats object
             for (const member of ourClan.members) {
                 if (!playerStats[member.tag]) {
                     playerStats[member.tag] = {
-                        tag: member.tag,
-                        name: member.name,
-                        stars: 0,
-                        destruction: 0,
-                        attacks: 0,
-                        defenses: 0,
-                        starsConceded: 0,
+                        tag: member.tag, name: member.name, stars: 0, destruction: 0,
+                        attacks: 0, defenses: 0, starsConceded: 0,
                     };
                 }
             }
 
-            // Tally offensive stats
             for (const member of ourClan.members) {
                 if (member.attacks) {
                     playerStats[member.tag].attacks += member.attacks.length;
@@ -199,7 +199,6 @@ app.get('/cwl-stats', async (req, res) => {
                 }
             }
 
-            // Tally defensive stats by checking enemy attacks against our players
             for (const enemy of enemyClan.members) {
                 if (enemy.attacks) {
                     for (const attack of enemy.attacks) {
@@ -213,12 +212,15 @@ app.get('/cwl-stats', async (req, res) => {
             }
         }
 
-        // 4. Final calculation and sorting
-        const finalStats = Object.values(playerStats).map(p => {
-            p.netStars = p.stars - p.starsConceded;
-            p.avgDestruction = p.attacks > 0 ? (p.destruction / p.attacks).toFixed(2) : 0;
-            return p;
-        }).sort((a, b) => b.netStars - a.netStars); // Sort by Net Stars descending
+        // 4. Final calculation, filtering, and sorting
+        const finalStats = Object.values(playerStats)
+            // --- NEW: Filter the list to only include current members ---
+            .filter(player => currentMemberTags.has(player.tag))
+            .map(p => {
+                p.netStars = p.stars - p.starsConceded;
+                p.avgDestruction = p.attacks > 0 ? (p.destruction / p.attacks).toFixed(2) : 0;
+                return p;
+            }).sort((a, b) => b.netStars - a.netStars);
 
         res.json(finalStats);
 
