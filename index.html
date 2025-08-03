@@ -17,7 +17,6 @@
         .rank-cell span { display: block; line-height: 1.3; }
         .rank-highest { font-size: 0.9em; }
         .rank-current { font-size: 0.9em; color: #d9534f; }
-        /* --- NEW STYLES for Sorting --- */
         .sortable { cursor: pointer; user-select: none; }
         .sortable:hover { background-color: #6c757d; }
         .sortable.sorted-asc::after { content: ' ▲'; }
@@ -30,8 +29,8 @@
 <table id="member-table" style="display:none;">
     <thead>
     <tr>
-        <th class="sortable" data-column="name">Name</th>
         <th class="sortable sorted-desc" data-column="trophies">Trophies</th>
+        <th class="sortable" data-column="name">Name</th>
         <th class="sortable" data-column="rank">Rank</th>
     </tr>
     </thead>
@@ -39,28 +38,23 @@
 </table>
 
 <script>
-    let allMembers = []; // Store the original fetched data
-    let sortState = { column: 'trophies', order: 'desc' }; // Default sort state
+    let allMembers = [];
+    let sortState = { column: 'trophies', order: 'desc' };
 
-    // Main function to fetch data when the page loads
     async function getTrackedData() {
         try {
             const response = await fetch(`/tracked-clan-data`);
-            allMembers = await response.json(); // Store data globally
+            allMembers = await response.json();
             if (!response.ok) throw new Error(allMembers.error || 'An unknown error occurred.');
-
-            renderTable(); // Initial render with default sort
+            renderTable();
         } catch (error) {
             document.getElementById('loader').innerText = `Error: ${error.message}`;
         }
     }
 
-    // --- NEW: Function to handle sorting and re-rendering ---
     function renderTable() {
-        // Sorting logic
         allMembers.sort((a, b) => {
             let valA, valB;
-
             switch (sortState.column) {
                 case 'name':
                     valA = a.name.toLowerCase();
@@ -75,17 +69,14 @@
                     valB = b.trophies;
                     break;
             }
-
             if (valA < valB) return sortState.order === 'asc' ? -1 : 1;
             if (valA > valB) return sortState.order === 'asc' ? 1 : -1;
             return 0;
         });
-
         updateSortHeaders();
         displayData(allMembers);
     }
 
-    // --- NEW: Update headers to show sort indicators ---
     function updateSortHeaders() {
         document.querySelectorAll('th.sortable').forEach(th => {
             th.classList.remove('sorted-asc', 'sorted-desc');
@@ -95,7 +86,6 @@
         });
     }
 
-    // This function now only handles putting data into the table
     function displayData(members) {
         const tableBody = document.getElementById('member-list');
         const loader = document.getElementById('loader');
@@ -120,28 +110,27 @@
             }
             rankCell.innerHTML = rankHtml;
 
-            row.appendChild(nameCell);
+            // MODIFIED: Append cells in the new order
             row.appendChild(trophiesCell);
+            row.appendChild(nameCell);
             row.appendChild(rankCell);
+
             tableBody.appendChild(row);
         });
         loader.style.display = 'none';
         table.style.display = 'table';
     }
 
-    // --- NEW: Add event listeners to headers ---
     document.querySelectorAll('th.sortable').forEach(th => {
         th.addEventListener('click', () => {
             const column = th.dataset.column;
             if (sortState.column === column) {
-                // Reverse the order if clicking the same column
                 sortState.order = sortState.order === 'asc' ? 'desc' : 'asc';
             } else {
-                // Set new column and default order
                 sortState.column = column;
-                sortState.order = (column === 'name') ? 'asc' : 'desc'; // Name sorts A-Z, others sort high-low
+                sortState.order = (column === 'name') ? 'asc' : 'desc';
             }
-            renderTable(); // Re-sort and display the data
+            renderTable();
         });
     });
 
