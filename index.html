@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clan Member Ranks</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lato&display=swap');
+        /* MODIFIED: Imported the 'Lilita One' font */
+        @import url('https://fonts.googleapis.com/css2?family=Lilita+One&family=Lato&display=swap');
 
         :root {
             --coc-gold: #fde068;
@@ -23,12 +24,14 @@
             min-height: 100vh;
         }
 
-        h1 {
-            font-family: 'Cinzel', serif;
+        h1, th {
+            /* MODIFIED: Using the new font */
+            font-family: 'Lilita One', cursive;
             color: var(--coc-gold);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            text-align: center;
+            letter-spacing: 1px;
         }
+        h1 { text-align: center; }
 
         #loader { text-align: center; font-size: 1.2em; }
 
@@ -50,18 +53,13 @@
             vertical-align: middle;
         }
 
-        th {
-            font-family: 'Cinzel', serif;
-            background-color: rgba(0,0,0,0.3);
-            color: var(--coc-gold);
-        }
-
+        th { background-color: rgba(0,0,0,0.3); }
         a { color: #87cefa; text-decoration: none; }
         a:hover { text-decoration: underline; }
 
         .rank-cell span { display: block; line-height: 1.3; }
         .rank-highest { font-size: 0.9em; }
-        .rank-current { font-size: 0.9em; color: #ff6b6b; } /* A brighter red for dark backgrounds */
+        .rank-current { font-size: 0.9em; color: #ff6b6b; }
 
         .sortable { cursor: pointer; user-select: none; }
         .sortable:hover { background-color: rgba(255,255,255,0.1); }
@@ -84,19 +82,16 @@
 </table>
 
 <script>
-    // --- Your JavaScript code remains exactly the same ---
+    // --- JavaScript code remains exactly the same ---
     let allMembers = [];
     let sortState = { column: 'trophies', order: 'desc' };
-
     async function getTrackedData() {
         try {
             const response = await fetch(`/tracked-clan-data`);
             allMembers = await response.json();
             if (!response.ok) throw new Error(allMembers.error || 'An unknown error occurred.');
             renderTable();
-        } catch (error) {
-            document.getElementById('loader').innerText = `Error: ${error.message}`;
-        }
+        } catch (error) { document.getElementById('loader').innerText = `Error: ${error.message}`; }
     }
     function renderTable() {
         allMembers.sort((a, b) => {
