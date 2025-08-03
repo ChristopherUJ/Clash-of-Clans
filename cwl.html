@@ -42,7 +42,12 @@
             border-radius: 8px;
             box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
-        th, td { padding: 12px 15px; text-align: center; border-bottom: 1px solid #444; }
+        th, td {
+            /* MODIFIED: Slightly reduced default padding */
+            padding: 10px 12px;
+            text-align: center;
+            border-bottom: 1px solid #444;
+        }
         td:first-child { text-align: left; }
         th { background-color: rgba(0,0,0,0.3); }
         .missed-attacks { color: var(--coc-red); font-weight: bold; }
@@ -50,6 +55,18 @@
         .sortable:hover { background-color: rgba(255,255,255,0.1); }
         .sortable.sorted-asc::after { content: ' ▲'; }
         .sortable.sorted-desc::after { content: ' ▼'; }
+
+        /* --- NEW: Mobile Styles --- */
+        @media (max-width: 600px) {
+            body { padding: 5px; }
+            h1 { font-size: 1.5em; }
+            .nav-link { font-size: 1em; }
+            table { max-width: 100%; font-size: 0.8em; }
+            th, td {
+                padding: 6px 3px; /* Further reduce cell padding on mobile */
+                line-height: 1.2;
+            }
+        }
     </style>
 </head>
 <body>
@@ -71,48 +88,38 @@
     <tbody id="cwl-list"></tbody>
 </table>
 <script>
+    // --- JavaScript code remains exactly the same ---
     let allPlayers = [];
     let sortState = { column: 'netStars', order: 'desc' };
-
     async function getCwlData() {
         try {
             const response = await fetch(`/cwl-stats`);
             allPlayers = await response.json();
             if (!response.ok) throw new Error(allPlayers.error || 'An unknown error occurred.');
             renderTable();
-        } catch (error) {
-            document.getElementById('loader').innerText = `Error: ${error.message}`;
-        }
+        } catch (error) { document.getElementById('loader').innerText = `Error: ${error.message}`; }
     }
-
     function renderTable() {
-        // --- MODIFIED SORTING LOGIC ---
         allPlayers.sort((a, b) => {
             let valA, valB;
             const column = sortState.column;
-
             if (column === 'name') {
                 valA = a.name.toLowerCase();
                 valB = b.name.toLowerCase();
             } else if (column === 'avgDestruction') {
-                // This is the fix: convert the string back to a number for sorting
                 valA = parseFloat(a.avgDestruction);
                 valB = parseFloat(b.avgDestruction);
             } else {
-                // All other columns are already numbers
                 valA = a[column];
                 valB = b[column];
             }
-
             if (valA < valB) return sortState.order === 'asc' ? -1 : 1;
             if (valA > valB) return sortState.order === 'asc' ? 1 : -1;
             return 0;
         });
-
         updateSortHeaders();
         displayData(allPlayers);
     }
-
     function updateSortHeaders() {
         document.querySelectorAll('th.sortable').forEach(th => {
             th.classList.remove('sorted-asc', 'sorted-desc');
@@ -121,7 +128,6 @@
             }
         });
     }
-
     function displayData(players) {
         const tableBody = document.getElementById('cwl-list');
         tableBody.innerHTML = '';
@@ -130,7 +136,6 @@
             const nameCell = document.createElement('td');
             nameCell.textContent = player.name;
             row.appendChild(nameCell);
-
             row.innerHTML += `
                     <td>${player.attacks}</td>
                     <td class="${player.missedAttacks > 0 ? 'missed-attacks' : ''}">${player.missedAttacks}</td>
@@ -139,13 +144,11 @@
                     <td><b>${player.netStars}</b></td>
                     <td>${player.avgDestruction}%</td>
                 `;
-
             tableBody.appendChild(row);
         });
         document.getElementById('loader').style.display = 'none';
         document.getElementById('cwl-table').style.display = 'table';
     }
-
     document.querySelectorAll('th.sortable').forEach(th => {
         th.addEventListener('click', () => {
             const column = th.dataset.column;
@@ -158,7 +161,6 @@
             renderTable();
         });
     });
-
     window.onload = getCwlData;
 </script>
 </body>

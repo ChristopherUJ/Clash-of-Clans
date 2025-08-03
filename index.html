@@ -6,23 +6,18 @@
     <title>Clan Members</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Lilita+One&family=Lato&display=swap');
-
         :root {
             --coc-gold: #fde068;
             --coc-light-text: #e0e0e0;
-            /* MODIFIED: Changed panel color to a dark gray */
             --coc-dark-panel: #111;
         }
-
         body {
             font-family: 'Lato', sans-serif;
-            /* MODIFIED: Changed background to solid black */
             background-color: #000;
             color: var(--coc-light-text);
             padding: 20px;
             min-height: 100vh;
         }
-
         h1, th {
             font-family: 'Lilita One', cursive;
             color: var(--coc-gold);
@@ -30,11 +25,6 @@
             letter-spacing: 1px;
         }
         h1 { text-align: center; }
-        .nav-link {
-            display: block; text-align: center; margin-bottom: 20px; color: #87cefa;
-            font-family: 'Lilita One', cursive; font-size: 1.2em; text-decoration: none;
-        }
-        .nav-link:hover { text-decoration: underline; }
         #loader { text-align: center; font-size: 1.2em; }
         table {
             width: 100%;
@@ -47,9 +37,10 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
         th, td {
-            padding: 12px 15px;
+            /* MODIFIED: Slightly reduced default padding */
+            padding: 10px 12px;
             text-align: left;
-            border-bottom: 1px solid #444; /* Darker border for contrast */
+            border-bottom: 1px solid #444;
             vertical-align: middle;
         }
         th { background-color: rgba(0,0,0,0.3); }
@@ -62,13 +53,27 @@
         .sortable:hover { background-color: rgba(255,255,255,0.1); }
         .sortable.sorted-asc::after { content: ' ▲'; }
         .sortable.sorted-desc::after { content: ' ▼'; }
+
+        /* --- NEW: Mobile Styles --- */
+        @media (max-width: 600px) {
+            body { padding: 5px; }
+            h1 { font-size: 1.8em; }
+            table { max-width: 100%; font-size: 0.9em; }
+            th, td {
+                padding: 8px 5px; /* Further reduce padding on mobile */
+                line-height: 1.2;
+            }
+            .player-tag { /* New style to stack name and tag */
+                display: block;
+                font-size: 0.8em;
+                color: #aaa;
+            }
+        }
     </style>
 </head>
 <body>
 <h1>Clan Members</h1>
-
 <a href="/cwl.html" class="nav-link">View CWL Performance →</a>
-
 <div id="loader">Fetching data...</div>
 <table id="member-table" style="display:none;">
     <thead>
@@ -81,7 +86,6 @@
     <tbody id="member-list"></tbody>
 </table>
 <script>
-    // --- JavaScript code remains exactly the same ---
     let allMembers = [];
     let sortState = { column: 'trophies', order: 'desc' };
     async function getTrackedData() {
@@ -128,7 +132,8 @@
             rankCell.classList.add('rank-cell');
             const playerLink = document.createElement('a');
             playerLink.href = `/player.html?tag=${member.tag.replace('#', '')}`;
-            playerLink.textContent = `${member.name} (${member.tag})`;
+            // MODIFIED: Wrapped tag in a span for mobile styling
+            playerLink.innerHTML = `${member.name} <span class="player-tag">(${member.tag})</span>`;
             nameCell.appendChild(playerLink);
             trophiesCell.textContent = member.trophies.toLocaleString();
             let rankHtml = `<span class="rank-highest"><b>${member.highestRoleName}</b></span>`;
