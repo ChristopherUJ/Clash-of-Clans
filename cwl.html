@@ -34,7 +34,7 @@
         #loader { text-align: center; font-size: 1.2em; }
         table {
             width: 100%;
-            max-width: 1000px;
+            max-width: 900px; /* Adjusted width */
             margin: 20px auto;
             border-collapse: collapse;
             background-color: var(--coc-dark-panel);
@@ -45,7 +45,7 @@
         th, td { padding: 12px 15px; text-align: center; border-bottom: 1px solid #444; }
         td:first-child { text-align: left; }
         th { background-color: rgba(0,0,0,0.3); }
-        .missed-attacks { color: var(--coc-red); font-weight: bold; }
+        .missed-attack { color: var(--coc-red); font-weight: bold; } /* Changed class name */
         .sortable { cursor: pointer; user-select: none; }
         .sortable:hover { background-color: rgba(255,255,255,0.1); }
         .sortable.sorted-asc::after { content: ' ▲'; }
@@ -68,7 +68,6 @@
     <tr>
         <th class="sortable" data-column="name">Player</th>
         <th class="sortable" data-column="attacks">Attacks</th>
-        <th class="sortable" data-column="missedAttacks">Missed</th>
         <th class="sortable sorted-desc" data-column="stars">⭐ Earned</th>
         <th class="sortable" data-column="starsConceded">⭐ Conceded</th>
         <th class="sortable" data-column="netStars">Net ⭐</th>
@@ -79,7 +78,6 @@
 </table>
 <script>
     let allPlayers = [];
-    // MODIFIED: Changed default sort column to 'stars'
     let sortState = { column: 'stars', order: 'desc' };
 
     async function getCwlData() {
@@ -131,9 +129,12 @@
             nameCell.textContent = player.name;
             row.appendChild(nameCell);
 
+            // MODIFIED: Row creation logic updated
+            const attacksText = `${player.attacks}/${player.warsParticipated}`;
+            const hasMissed = player.missedAttacks > 0;
+
             row.innerHTML += `
-                    <td>${player.attacks}</td>
-                    <td class="${player.missedAttacks > 0 ? 'missed-attacks' : ''}">${player.missedAttacks}</td>
+                    <td class="${hasMissed ? 'missed-attack' : ''}">${attacksText}</td>
                     <td>${player.stars}</td>
                     <td>${player.starsConceded}</td>
                     <td><b>${player.netStars}</b></td>
