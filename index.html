@@ -3,28 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clan Member Highest Ranks</title>
+    <title>Clan Member Ranks</title>
     <style>
         body { font-family: sans-serif; background-color: #f0f0f0; color: #333; padding: 20px; }
         h1 { text-align: center; }
         #loader { text-align: center; font-size: 1.2em; }
         table { width: 100%; max-width: 600px; margin: 20px auto; border-collapse: collapse; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background-color: white; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: middle; }
         th { background-color: #555; color: white; }
         tr:nth-child(even) { background-color: #f9f9f9; }
         a { color: #007bff; text-decoration: none; }
         a:hover { text-decoration: underline; }
+        .rank-cell span { display: block; line-height: 1.3; }
+        .rank-highest { font-size: 0.9em; }
+        .rank-current { font-size: 0.9em; color: #d9534f; } /* Style for the red text */
     </style>
 </head>
 <body>
-<h1>Clan Member Highest Attained Rank</h1>
+<h1>Clan Member Ranks</h1>
 <div id="loader">Fetching data...</div>
 <table id="member-table" style="display:none;">
     <thead>
     <tr>
         <th>Name</th>
-        <th>Highest Rank</th>
-    </tr>
+        <th>Rank</th> </tr>
     </thead>
     <tbody id="member-list"></tbody>
 </table>
@@ -48,14 +50,26 @@
             const row = document.createElement('tr');
             const nameCell = document.createElement('td');
             const rankCell = document.createElement('td');
+            rankCell.classList.add('rank-cell');
+
+            // Name Cell
             const playerLink = document.createElement('a');
             const playerTag = member.tag.replace('#', '');
             playerLink.href = `/player.html?tag=${playerTag}`;
             playerLink.textContent = `${member.name} (${member.tag})`;
             nameCell.appendChild(playerLink);
-            rankCell.innerHTML = `<b>${member.highestRoleName}</b>`;
+
+            // --- MODIFIED: Logic for combined Rank Cell ---
+            let rankHtml = `<span class="rank-highest"><b>${member.highestRoleName}</b></span>`;
+            // If ranks are different, add the current rank below in red
+            if (member.currentRoleName !== member.highestRoleName) {
+                rankHtml += `<span class="rank-current"><b>${member.currentRoleName}</b> (Current)</span>`;
+            }
+            rankCell.innerHTML = rankHtml;
+
             row.appendChild(nameCell);
             row.appendChild(rankCell);
+
             tableBody.appendChild(row);
         });
         loader.style.display = 'none';
