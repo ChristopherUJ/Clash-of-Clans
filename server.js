@@ -132,6 +132,102 @@ app.get('/player/:playerTag', (req, res) => {
     });
 });
 
+// in server.js, before app.listen(...)
+
+// =================================================================
+//  ENDPOINT FOR CLAN WAR LEAGUE STATS
+// =================================================================
+app.get('/cwl-stats', async (req, res) => {
+    try {
+        // 1. Get the current CWL group info to find all the war tags for the week
+        const groupRes = await fetch(`${COC_API_BASE_URL}/clans/%23${COC_CLAN_TAG.replace('#', '')}/currentwar/leaguegroup`, {
+            headers: { 'Authorization': `Bearer ${COC_API_KEY}` }
+        });
+        const groupData = await groupRes.json();
+
+        if (groupData.reason === 'notInWar') {
+            return res.status(404).json({ error: 'The clan is not currently in a Clan War League.' });
+        }
+        if (!groupData.rounds) {
+            return res.status(500).json({ error: 'Could not retrieve CWL rounds.' });
+        }
+
+        // 2. Create a list of promises to fetch every war in the week
+        const warPromises = groupData.rounds
+            .flatMap(round => round.warTags)
+            .filter(tag => tag !== '#0') // Filter out empty war tags
+            .map(warTag =>
+                fetch(`${COC_API_BASE_URL}/clanwarleagues/wars/%23${warTag.replace('#', '')}`, {
+                    headers: { 'Authorization': `Bearer ${COC_API_KEY}` }
+                }).then(res => res.json())
+            );
+
+        const allWarData = await Promise.all(warPromises);
+
+        // 3. Process all the war data to aggregate stats for each player
+        const playerStats = {};
+
+        for (const war of allWarData) {
+            if (war.state === 'notInWar') continue; // Skip wars that haven't started
+
+            const ourClan = war.clan.tag === `#${COC_CLAN_TAG}` ? war.clan : war.opponent;
+            const enemyClan = war.clan.tag !== `#${COC_CLAN_TAG}` ? war.clan : war.opponent;
+
+            // Initialize players if they don't exist in our stats object
+            for (const member of ourClan.members) {
+                if (!playerStats[member.tag]) {
+                    playerStats[member.tag] = {
+                        tag: member.tag,
+                        name: member.name,
+                        stars: 0,
+                        destruction: 0,
+                        attacks: 0,
+                        defenses: 0,
+                        starsConceded: 0,
+                    };
+                }
+            }
+
+            // Tally offensive stats
+            for (const member of ourClan.members) {
+                if (member.attacks) {
+                    playerStats[member.tag].attacks += member.attacks.length;
+                    for (const attack of member.attacks) {
+                        playerStats[member.tag].stars += attack.stars;
+                        playerStats[member.tag].destruction += attack.destructionPercentage;
+                    }
+                }
+            }
+
+            // Tally defensive stats by checking enemy attacks against our players
+            for (const enemy of enemyClan.members) {
+                if (enemy.attacks) {
+                    for (const attack of enemy.attacks) {
+                        const defenderTag = attack.defenderTag;
+                        if (playerStats[defenderTag]) {
+                            playerStats[defenderTag].defenses += 1;
+                            playerStats[defenderTag].starsConceded += attack.stars;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Final calculation and sorting
+        const finalStats = Object.values(playerStats).map(p => {
+            p.netStars = p.stars - p.starsConceded;
+            p.avgDestruction = p.attacks > 0 ? (p.destruction / p.attacks).toFixed(2) : 0;
+            return p;
+        }).sort((a, b) => b.netStars - a.netStars); // Sort by Net Stars descending
+
+        res.json(finalStats);
+
+    } catch (error) {
+        console.error("Error fetching CWL stats:", error);
+        res.status(500).json({ error: "Failed to fetch CWL stats." });
+    }
+});
+
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });

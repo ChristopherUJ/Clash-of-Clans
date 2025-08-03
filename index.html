@@ -30,6 +30,11 @@
             letter-spacing: 1px;
         }
         h1 { text-align: center; }
+        .nav-link {
+            display: block; text-align: center; margin-bottom: 20px; color: #87cefa;
+            font-family: 'Lilita One', cursive; font-size: 1.2em; text-decoration: none;
+        }
+        .nav-link:hover { text-decoration: underline; }
         #loader { text-align: center; font-size: 1.2em; }
         table {
             width: 100%;
@@ -61,6 +66,9 @@
 </head>
 <body>
 <h1>Clan Members</h1>
+
+<a href="/cwl.html" class="nav-link">View CWL Performance →</a>
+
 <div id="loader">Fetching data...</div>
 <table id="member-table" style="display:none;">
     <thead>
