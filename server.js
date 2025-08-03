@@ -170,23 +170,23 @@ app.get('/cwl-stats', async (req, res) => {
         const playerStats = {};
 
         for (const war of allWarData) {
-            // --- MODIFIED LINE: This now skips wars in preparation ---
-            if (war.state !== 'inWar' && war.state !== 'warEnded') continue;
+            // We still want to process 'inWar' for attack stats, so we only skip future wars
+            if (war.state === 'preparation' || war.state === 'notInWar') continue;
 
             const ourClan = war.clan.tag === `#${COC_CLAN_TAG}` ? war.clan : war.opponent;
             const enemyClan = war.clan.tag !== `#${COC_CLAN_TAG}` ? war.clan : war.opponent;
 
+            // Initialize all rostered players
             for (const member of ourClan.members) {
                 if (!playerStats[member.tag]) {
                     playerStats[member.tag] = {
                         tag: member.tag, name: member.name, stars: 0, destruction: 0,
-                        attacks: 0, defenses: 0, starsConceded: 0,
-                        warsParticipated: 0
+                        attacks: 0, defenses: 0, starsConceded: 0, missedAttacks: 0
                     };
                 }
-                playerStats[member.tag].warsParticipated += 1;
             }
 
+            // Tally offensive stats (for 'inWar' and 'warEnded' wars)
             for (const member of ourClan.members) {
                 if (member.attacks) {
                     playerStats[member.tag].attacks += member.attacks.length;
@@ -197,6 +197,18 @@ app.get('/cwl-stats', async (req, res) => {
                 }
             }
 
+            // --- MODIFIED LOGIC: Only count missed attacks for completed wars ---
+            if (war.state === 'warEnded') {
+                for (const member of ourClan.members) {
+                    if (!member.attacks || member.attacks.length === 0) {
+                        if (playerStats[member.tag]) {
+                            playerStats[member.tag].missedAttacks += 1;
+                        }
+                    }
+                }
+            }
+
+            // Tally defensive stats (for 'inWar' and 'warEnded' wars)
             for (const enemy of enemyClan.members) {
                 if (enemy.attacks) {
                     for (const attack of enemy.attacks) {
@@ -215,7 +227,7 @@ app.get('/cwl-stats', async (req, res) => {
             .map(p => {
                 p.netStars = p.stars - p.starsConceded;
                 p.avgDestruction = p.attacks > 0 ? (p.destruction / p.attacks).toFixed(2) : 0;
-                p.missedAttacks = p.warsParticipated - p.attacks;
+                // 'missedAttacks' is now calculated directly in the loop, so no changes needed here.
                 return p;
             }).sort((a, b) => b.netStars - a.netStars);
 
