@@ -10,6 +10,7 @@
             --coc-gold: #fde068;
             --coc-light-text: #e0e0e0;
             --coc-dark-panel: #111;
+            --coc-red: #ff6b6b;
         }
         body {
             font-family: 'Lato', sans-serif;
@@ -33,7 +34,7 @@
         #loader { text-align: center; font-size: 1.2em; }
         table {
             width: 100%;
-            max-width: 900px; /* Wider table for more columns */
+            max-width: 1000px; /* Wider table for more columns */
             margin: 20px auto;
             border-collapse: collapse;
             background-color: var(--coc-dark-panel);
@@ -42,8 +43,9 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
         th, td { padding: 12px 15px; text-align: center; border-bottom: 1px solid #444; }
-        td:first-child { text-align: left; } /* Align names to the left */
+        td:first-child { text-align: left; }
         th { background-color: rgba(0,0,0,0.3); }
+        .missed-attacks { color: var(--coc-red); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -55,7 +57,7 @@
     <tr>
         <th>Player</th>
         <th>Attacks</th>
-        <th>⭐ Earned</th>
+        <th>Missed</th> <th>⭐ Earned</th>
         <th>⭐ Conceded</th>
         <th>Net ⭐</th>
         <th>Avg %</th>
@@ -68,30 +70,39 @@
         try {
             const response = await fetch(`/cwl-stats`);
             const cwlData = await response.json();
-            if (!response.ok) throw new Error(cwlData.error || 'An unknown error occurred.');
+            if (!response.ok) throw new Error(cwl.error || 'An unknown error occurred.');
             displayData(cwlData);
         } catch (error) {
             document.getElementById('loader').innerText = `Error: ${error.message}`;
         }
     }
+
     function displayData(players) {
         const tableBody = document.getElementById('cwl-list');
         tableBody.innerHTML = '';
         players.forEach(player => {
             const row = document.createElement('tr');
-            row.innerHTML = `
-                    <td>${player.name}</td>
+
+            const nameCell = document.createElement('td');
+            nameCell.textContent = player.name;
+            row.appendChild(nameCell);
+
+            // Add the rest of the cells, including the new 'Missed' column
+            row.innerHTML += `
                     <td>${player.attacks}</td>
+                    <td class="${player.missedAttacks > 0 ? 'missed-attacks' : ''}">${player.missedAttacks}</td>
                     <td>${player.stars}</td>
                     <td>${player.starsConceded}</td>
                     <td><b>${player.netStars}</b></td>
                     <td>${player.avgDestruction}%</td>
                 `;
+
             tableBody.appendChild(row);
         });
         document.getElementById('loader').style.display = 'none';
         document.getElementById('cwl-table').style.display = 'table';
     }
+
     window.onload = getCwlData;
 </script>
 </body>

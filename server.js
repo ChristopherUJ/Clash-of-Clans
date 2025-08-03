@@ -139,14 +139,12 @@ app.get('/player/:playerTag', (req, res) => {
 // =================================================================
 app.get('/cwl-stats', async (req, res) => {
     try {
-        // --- NEW: First, get the list of current clan members ---
         const currentClanRes = await fetch(`${COC_API_BASE_URL}/clans/%23${COC_CLAN_TAG.replace('#', '')}`, {
             headers: { 'Authorization': `Bearer ${COC_API_KEY}` }
         });
         const currentClanData = await currentClanRes.json();
         const currentMemberTags = new Set(currentClanData.memberList.map(m => m.tag));
 
-        // 1. Get the current CWL group info to find all the war tags for the week
         const groupRes = await fetch(`${COC_API_BASE_URL}/clans/%23${COC_CLAN_TAG.replace('#', '')}/currentwar/leaguegroup`, {
             headers: { 'Authorization': `Bearer ${COC_API_KEY}` }
         });
@@ -159,7 +157,6 @@ app.get('/cwl-stats', async (req, res) => {
             return res.status(500).json({ error: 'Could not retrieve CWL rounds.' });
         }
 
-        // 2. Create a list of promises to fetch every war in the week
         const warPromises = groupData.rounds
             .flatMap(round => round.warTags)
             .filter(tag => tag !== '#0')
@@ -170,8 +167,6 @@ app.get('/cwl-stats', async (req, res) => {
             );
 
         const allWarData = await Promise.all(warPromises);
-
-        // 3. Process all the war data to aggregate stats for each player
         const playerStats = {};
 
         for (const war of allWarData) {
@@ -185,8 +180,11 @@ app.get('/cwl-stats', async (req, res) => {
                     playerStats[member.tag] = {
                         tag: member.tag, name: member.name, stars: 0, destruction: 0,
                         attacks: 0, defenses: 0, starsConceded: 0,
+                        warsParticipated: 0 // ADDED: Track wars participated in
                     };
                 }
+                // MODIFIED: Increment war participation count for each member in the roster
+                playerStats[member.tag].warsParticipated += 1;
             }
 
             for (const member of ourClan.members) {
@@ -212,13 +210,13 @@ app.get('/cwl-stats', async (req, res) => {
             }
         }
 
-        // 4. Final calculation, filtering, and sorting
         const finalStats = Object.values(playerStats)
-            // --- NEW: Filter the list to only include current members ---
             .filter(player => currentMemberTags.has(player.tag))
             .map(p => {
                 p.netStars = p.stars - p.starsConceded;
                 p.avgDestruction = p.attacks > 0 ? (p.destruction / p.attacks).toFixed(2) : 0;
+                // ADDED: Calculate missed attacks
+                p.missedAttacks = p.warsParticipated - p.attacks;
                 return p;
             }).sort((a, b) => b.netStars - a.netStars);
 
