@@ -170,7 +170,8 @@ app.get('/cwl-stats', async (req, res) => {
         const playerStats = {};
 
         for (const war of allWarData) {
-            if (war.state === 'notInWar') continue;
+            // --- MODIFIED LINE: This now skips wars in preparation ---
+            if (war.state !== 'inWar' && war.state !== 'warEnded') continue;
 
             const ourClan = war.clan.tag === `#${COC_CLAN_TAG}` ? war.clan : war.opponent;
             const enemyClan = war.clan.tag !== `#${COC_CLAN_TAG}` ? war.clan : war.opponent;
@@ -180,10 +181,9 @@ app.get('/cwl-stats', async (req, res) => {
                     playerStats[member.tag] = {
                         tag: member.tag, name: member.name, stars: 0, destruction: 0,
                         attacks: 0, defenses: 0, starsConceded: 0,
-                        warsParticipated: 0 // ADDED: Track wars participated in
+                        warsParticipated: 0
                     };
                 }
-                // MODIFIED: Increment war participation count for each member in the roster
                 playerStats[member.tag].warsParticipated += 1;
             }
 
@@ -215,7 +215,6 @@ app.get('/cwl-stats', async (req, res) => {
             .map(p => {
                 p.netStars = p.stars - p.starsConceded;
                 p.avgDestruction = p.attacks > 0 ? (p.destruction / p.attacks).toFixed(2) : 0;
-                // ADDED: Calculate missed attacks
                 p.missedAttacks = p.warsParticipated - p.attacks;
                 return p;
             }).sort((a, b) => b.netStars - a.netStars);
