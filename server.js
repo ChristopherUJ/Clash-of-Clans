@@ -133,16 +133,23 @@ app.get('/update-data', async (req, res) => {
 //  ENDPOINTS TO SERVE CACHED DATA
 // =================================================================
 app.get('/tracked-clan-data', async (req, res) => {
+    console.log("-> Received request for /tracked-clan-data");
     try {
         const sql = "SELECT * FROM players ORDER BY trophies DESC";
+        console.log("--> Executing SQL query...");
         const rows = await dbAll(sql, []);
+        console.log(`--> Query successful, found ${rows.length} rows.`);
+
         const responseData = rows.map(player => ({
             tag: player.tag, name: player.name, trophies: player.trophies,
             currentRoleName: getRoleName(player.role), highestRoleName: getRoleName(player.highestRole),
             sortOrder: roleHierarchy[player.highestRole], lastSeenActive: player.lastSeenActive
         }));
+
+        console.log("--> Sending JSON response.");
         res.json(responseData);
     } catch (err) {
+        console.error("!!! ERROR in /tracked-clan-data:", err);
         res.status(500).json({ error: 'Failed to read database.' });
     }
 });
