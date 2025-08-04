@@ -56,43 +56,41 @@ app.get('/update-data', async (req, res) => {
             const playerData = await playerRes.json();
             if (!playerRes.ok) continue;
 
-            // MODIFIED: Compare current stats with stored stats to check for activity
             db.get('SELECT * FROM players WHERE tag = ?', [member.tag], (err, storedPlayer) => {
-                let lastSeenActive = new Date().toISOString(); // Default to now
+                let lastSeenActive = new Date().toISOString();
                 let highestRole = member.role;
 
                 if (storedPlayer) {
-                    // Check if any key stat has changed
+                    // --- MODIFIED LOGIC: Check only for active player actions ---
                     const donationsChanged = storedPlayer.donations !== playerData.donations;
-                    const trophiesChanged = storedPlayer.trophies !== playerData.trophies;
                     const expLevelChanged = storedPlayer.expLevel !== playerData.expLevel;
 
-                    if (!donationsChanged && !trophiesChanged && !expLevelChanged) {
-                        // If nothing changed, keep the old timestamp
+                    // Only update the timestamp if donations or XP have changed.
+                    // Passive trophy loss from a defense will now be ignored.
+                    if (!donationsChanged && !expLevelChanged) {
                         lastSeenActive = storedPlayer.lastSeenActive;
                     }
 
-                    // Check for highest rank promotion
                     if (roleHierarchy[storedPlayer.highestRole] > roleHierarchy[member.role]) {
                         highestRole = storedPlayer.highestRole;
                     }
                 }
 
                 const upsertSql = `
-          INSERT INTO players (tag, name, role, highestRole, townHallLevel, expLevel, trophies, bestTrophies, warStars, donations, donationsReceived, troopDonations, spellDonations, siegeDonations, lastSeenActive)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(tag) DO UPDATE SET
-            name=excluded.name, role=excluded.role, highestRole=excluded.highestRole, townHallLevel=excluded.townHallLevel,
-            expLevel=excluded.expLevel, trophies=excluded.trophies, bestTrophies=excluded.bestTrophies, warStars=excluded.warStars,
-            donations=excluded.donations, donationsReceived=excluded.donationsReceived, troopDonations=excluded.troopDonations,
-            spellDonations=excluded.spellDonations, siegeDonations=excluded.siegeDonations, lastSeenActive=excluded.lastSeenActive;
-        `;
+                    INSERT INTO players (tag, name, role, highestRole, townHallLevel, expLevel, trophies, bestTphies, warStars, donations, donationsReceived, troopDonations, spellDonations, siegeDonations, lastSeenActive)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(tag) DO UPDATE SET
+                        name=excluded.name, role=excluded.role, highestRole=excluded.highestRole, townHallLevel=excluded.townHallLevel,
+                                                expLevel=excluded.expLevel, trophies=excluded.trophies, bestTrophies=excluded.bestTrophies, warStars=excluded.warStars,
+                                                donations=excluded.donations, donationsReceived=excluded.donationsReceived, troopDonations=excluded.troopDonations,
+                                                spellDonations=excluded.spellDonations, siegeDonations=excluded.siegeDonations, lastSeenActive=excluded.lastSeenActive;
+                `;
                 const params = [
                     member.tag, sanitizeName(member.name), member.role, highestRole, playerData.townHallLevel,
                     playerData.expLevel, playerData.trophies, playerData.bestTrophies, playerData.warStars,
                     playerData.donations, playerData.donationsReceived, findAchievementValue(playerData.achievements, 'Friend in Need'),
                     findAchievementValue(playerData.achievements, 'Sharing is caring'), findAchievementValue(playerData.achievements, 'Siege Sharer'),
-                    lastSeenActive // The new timestamp
+                    lastSeenActive
                 ];
                 db.run(upsertSql, params);
             });
