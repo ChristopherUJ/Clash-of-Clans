@@ -115,7 +115,7 @@
                 valA = a.name.toLowerCase(); valB = b.name.toLowerCase();
             } else if (column === 'rank') {
                 valA = a.sortOrder; valB = b.sortOrder;
-            } else { // trophies
+            } else {
                 valA = a.trophies; valB = b.trophies;
             }
             if (valA < valB) return sortState.order === 'asc' ? -1 : 1;
@@ -171,9 +171,9 @@
                 const now = new Date();
                 const diffDays = (now - lastActiveDate) / (1000 * 60 * 60 * 24);
                 if (diffDays > 7) {
-                    lastActiveCell.style.color = '#ff6b6b'; // Red
+                    lastActiveCell.style.color = '#ff6b6b';
                 } else if (diffDays > 3) {
-                    lastActiveCell.style.color = '#f0ad4e'; // Orange
+                    lastActiveCell.style.color = '#f0ad4e';
                 }
             }
 
@@ -187,4 +187,21 @@
         document.getElementById('member-table').style.display = 'table';
     }
 
+    // --- THIS BLOCK IS NOW CORRECTED ---
     document.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+            const column = th.dataset.column;
+            if (sortState.column === column) {
+                sortState.order = sortState.order === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState.column = column;
+                sortState.order = (column === 'name') ? 'asc' : 'desc';
+            }
+            renderTable();
+        });
+    });
+
+    window.onload = getTrackedData;
+</script>
+</body>
+</html>
