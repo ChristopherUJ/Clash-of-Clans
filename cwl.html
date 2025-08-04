@@ -5,101 +5,168 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CWL Performance</title>
     <style>
-        /* ... existing styles ... */
-        .attack-warning { color: #f0ad4e; font-weight: bold; } /* Orange */
-        .attack-urgent { color: var(--coc-red); font-weight: bold; } /* Red */
+        @import url('https://fonts.googleapis.com/css2?family=Lilita+One&family=Lato&display=swap');
+        :root {
+            --coc-gold: #fde068;
+            --coc-light-text: #e0e0e0;
+            --coc-dark-panel: #111;
+            --coc-red: #ff6b6b;
+            --coc-orange: #f0ad4e;
+        }
+        body { font-family: 'Lato', sans-serif; background-color: #000; color: var(--coc-light-text); padding: 20px; min-height: 100vh; }
+        h1, th { font-family: 'Lilita One', cursive; color: var(--coc-gold); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); letter-spacing: 1px; }
+        h1 { text-align: center; }
+        .nav-link { display: block; text-align: center; margin-bottom: 20px; color: #87cefa; font-family: 'Lilita One', cursive; font-size: 1.2em; text-decoration: none; }
+        .nav-link:hover { text-decoration: underline; }
+        #loader { text-align: center; font-size: 1.2em; }
+        .summary-container { display: flex; justify-content: center; gap: 20px; margin: 20px auto; max-width: 1000px; text-align: center; }
+        .summary-box { background-color: var(--coc-dark-panel); border: 1px solid var(--coc-gold); padding: 15px; border-radius: 8px; width: 150px; }
+        .summary-title { font-size: 0.9em; color: #aaa; }
+        .summary-value { font-family: 'Lilita One', cursive; font-size: 1.8em; color: var(--coc-gold); }
+        .summary-value.missed { color: var(--coc-red); }
+        table { width: 100%; max-width: 1000px; margin: 20px auto; border-collapse: collapse; background-color: var(--coc-dark-panel); border: 2px solid var(--coc-gold); border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        th, td { padding: 12px 15px; text-align: center; border-bottom: 1px solid #444; }
+        td:first-child { text-align: left; }
+        th { background-color: rgba(0,0,0,0.3); }
+        .missed-attack { color: var(--coc-red); font-weight: bold; }
+        .attack-warning { color: var(--coc-orange); font-weight: bold; }
+        .attack-urgent { color: var(--coc-red); font-weight: bold; }
+        .sortable { cursor: pointer; user-select: none; }
+        .sortable:hover { background-color: rgba(255,255,255,0.1); }
+        .sortable.sorted-asc::after { content: ' ▲'; }
+        .sortable.sorted-desc::after { content: ' ▼'; }
+        @media (max-width: 600px) {
+            body { padding: 5px; }
+            h1 { font-size: 1.5em; }
+            .nav-link { font-size: 1em; }
+            .summary-container { flex-direction: column; gap: 10px; align-items: center;}
+            table { max-width: 100%; font-size: 0.75em; }
+            th, td { padding: 6px 3px; line-height: 1.2; }
+        }
     </style>
 </head>
 <body>
+<h1>Clan War League Performance</h1>
+<a href="/index.html" class="nav-link">← Back to Main Roster</a>
+<div id="loader">Calculating CWL stats... this may take a moment.</div>
+<div id="summary-section" class="summary-container" style="display:none;">
+    <div class="summary-box"> <div class="summary-title">Clan Avg Stars</div> <div id="summary-avg-stars" class="summary-value">0</div> </div>
+    <div class="summary-box"> <div class="summary-title">Total Attacks</div> <div id="summary-attacks" class="summary-value">0</div> </div>
+    <div class="summary-box"> <div class="summary-title">Total Missed</div> <div id="summary-missed" class="summary-value missed">0</div> </div>
+</div>
 <table id="cwl-table" style="display:none;">
+    <thead>
+    <tr>
+        <th class="sortable" data-column="name">Player</th>
+        <th class="sortable" data-column="attacks">Attacks</th>
+        <th class="sortable sorted-desc" data-column="stars">⭐ Earned</th>
+        <th class="sortable" data-column="avgStars">Avg ⭐</th>
+        <th class="sortable" data-column="starsConceded">⭐ Conceded</th>
+        <th class="sortable" data-column="netStars">Net ⭐</th>
+        <th class="sortable" data-column="avgDestruction">Avg %</th>
+    </tr>
+    </thead>
     <tbody id="cwl-list"></tbody>
 </table>
 <script>
     let allPlayers = [];
     let sortState = { column: 'stars', order: 'desc' };
-
     async function getCwlData() {
         try {
             const response = await fetch(`/cwl-stats`);
             const cwlData = await response.json();
             if (!response.ok) throw new Error(cwlData.error || 'An unknown error occurred.');
-
             allPlayers = cwlData.players;
             displaySummary(cwlData.summary);
-            // MODIFIED: Pass the war end time to the render function
             renderTable(cwlData.currentWarEndTime);
-        } catch (error) { document.getElementById('loader').innerText = `Error: ${error.message}`; }
+        } catch (error) {
+            document.getElementById('loader').innerText = `Error: ${error.message}`;
+        }
     }
-
     function displaySummary(summary) {
-        // ... (this function is unchanged) ...
+        document.getElementById('summary-avg-stars').textContent = summary.averageStars;
+        document.getElementById('summary-attacks').textContent = summary.totalAttacks;
+        document.getElementById('summary-missed').textContent = summary.totalMissedAttacks;
+        document.getElementById('summary-section').style.display = 'flex';
     }
-
-    // MODIFIED: Accept war end time
     function renderTable(currentWarEndTime) {
         allPlayers.sort((a, b) => {
-            // ... (sorting logic is unchanged) ...
+            let valA, valB;
+            const column = sortState.column;
+            if (column === 'name') { valA = a.name.toLowerCase(); valB = b.name.toLowerCase(); }
+            else if (column === 'avgDestruction' || column === 'avgStars') { valA = parseFloat(a[column]); valB = parseFloat(b[column]); }
+            else { valA = a[column]; valB = b[column]; }
+            if (valA < valB) return sortState.order === 'asc' ? -1 : 1;
+            if (valA > valB) return sortState.order === 'asc' ? 1 : -1;
+            return 0;
         });
         updateSortHeaders();
-        // MODIFIED: Pass war end time to the display function
         displayData(allPlayers, currentWarEndTime);
     }
-
     function updateSortHeaders() {
-        // ... (this function is unchanged) ...
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.classList.remove('sorted-asc', 'sorted-desc');
+            if (th.dataset.column === sortState.column) {
+                th.classList.add(sortState.order === 'asc' ? 'sorted-asc' : 'sorted-desc');
+            }
+        });
     }
-
-    // MODIFIED: This function now contains the time-sensitive logic
     function displayData(players, currentWarEndTime) {
         const tableBody = document.getElementById('cwl-list');
-        tableBody.innerHTML = '';
-
-        let hoursRemaining = -1; // Default to -1 if not in war
+        let hoursRemaining = -1;
         if (currentWarEndTime) {
-            const now = new Date();
-            const endTime = new Date(currentWarEndTime);
-            hoursRemaining = (endTime - now) / (1000 * 60 * 60);
+            hoursRemaining = (new Date(currentWarEndTime) - new Date()) / (1000 * 60 * 60);
         }
-
+        tableBody.innerHTML = '';
         players.forEach(player => {
             const row = document.createElement('tr');
             const nameCell = document.createElement('td');
+            const attacksCell = document.createElement('td');
+            const starsCell = document.createElement('td');
+            const avgStarsCell = document.createElement('td');
+            const concededCell = document.createElement('td');
+            const netCell = document.createElement('td');
+            const avgDestCell = document.createElement('td');
+
             nameCell.textContent = player.name;
-            row.appendChild(nameCell);
+            attacksCell.textContent = `${player.attacks}/${player.warsParticipated}`;
 
-            const attacksText = `${player.attacks}/${player.warsParticipated}`;
-
-            // Determine the class for the attacks cell
-            let attacksClass = '';
             if (hoursRemaining > 0 && !player.attackedInCurrentWar) {
-                if (hoursRemaining < 2) {
-                    attacksClass = 'attack-urgent'; // Red
-                } else if (hoursRemaining < 4) {
-                    attacksClass = 'attack-warning'; // Orange
-                }
+                if (hoursRemaining < 2) { attacksCell.className = 'attack-urgent'; }
+                else if (hoursRemaining < 4) { attacksCell.className = 'attack-warning'; }
             } else if (player.missedAttacks > 0) {
-                attacksClass = 'missed-attack'; // Original red for missed attacks
+                attacksCell.className = 'missed-attack';
             }
 
-            row.innerHTML += `
-                    <td class="${attacksClass}">${attacksText}</td>
-                    <td>${player.stars}</td>
-                    <td>${player.avgStars}</td>
-                    <td>${player.starsConceded}</td>
-                    <td><b>${player.netStars}</b></td>
-                    <td>${player.avgDestruction}%</td>
-                `;
+            starsCell.textContent = player.stars;
+            avgStarsCell.textContent = player.avgStars;
+            concededCell.textContent = player.starsConceded;
+            netCell.innerHTML = `<b>${player.netStars}</b>`;
+            avgDestCell.textContent = `${player.avgDestruction}%`;
 
+            row.appendChild(nameCell);
+            row.appendChild(attacksCell);
+            row.appendChild(starsCell);
+            row.appendChild(avgStarsCell);
+            row.appendChild(concededCell);
+            row.appendChild(netCell);
+            row.appendChild(avgDestCell);
             tableBody.appendChild(row);
         });
         document.getElementById('loader').style.display = 'none';
         document.getElementById('cwl-table').style.display = 'table';
     }
-
     document.querySelectorAll('th.sortable').forEach(th => {
-        // ... (event listener logic is unchanged) ...
+        th.addEventListener('click', () => {
+            const column = th.dataset.column;
+            if (sortState.column === column) {
+                sortState.order = sortState.order === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState.column = (column === 'name') ? 'asc' : 'desc';
+            }
+            renderTable(null); // Passing null as end time since it's just a re-sort
+        });
     });
-
     window.onload = getCwlData;
 </script>
 </body>
