@@ -167,25 +167,46 @@ app.get('/player/:playerTag', async (req, res) => {
 });
 
 // CWL STATS ENDPOINT
+// in server.js
+
 app.get('/cwl-stats', async (req, res) => {
     try {
-        // ... (The beginning of the function that fetches data is the same) ...
         const currentClanRes = await fetch(`${COC_API_BASE_URL}/clans/%23${COC_CLAN_TAG.replace('#', '')}`, {
             headers: { 'Authorization': `Bearer ${COC_API_KEY}` }
         });
         const currentClanData = await currentClanRes.json();
         const currentMemberTags = new Set(currentClanData.memberList.map(m => m.tag));
+
         const groupRes = await fetch(`${COC_API_BASE_URL}/clans/%23${COC_CLAN_TAG.replace('#', '')}/currentwar/leaguegroup`, {
             headers: { 'Authorization': `Bearer ${COC_API_KEY}` }
         });
         const groupData = await groupRes.json();
-        if (groupData.reason === 'notInWar') return res.status(404).json({ error: 'The clan is not currently in a Clan War League.' });
-        if (!groupData.rounds) return res.status(500).json({ error: 'Could not retrieve CWL rounds.' });
+
+        if (groupData.reason === 'notInWar') {
+            return res.status(404).json({ error: 'The clan is not currently in a Clan War League.' });
+        }
+        if (!groupData.rounds) {
+            return res.status(500).json({ error: 'Could not retrieve CWL rounds.' });
+        }
+
         const warPromises = groupData.rounds.flatMap(round => round.warTags).filter(tag => tag !== '#0')
             .map(warTag => fetch(`${COC_API_BASE_URL}/clanwarleagues/wars/%23${warTag.replace('#', '')}`, {
                 headers: { 'Authorization': `Bearer ${COC_API_KEY}` }
             }).then(res => res.json()));
+
         const allWarData = await Promise.all(warPromises);
+
+        const currentWar = allWarData.find(war => war.state === 'inWar');
+        let currentWarAttackerTags = new Set();
+        if (currentWar) {
+            const ourClanInCurrentWar = currentWar.clan.tag === `#${COC_CLAN_TAG}` ? currentWar.clan : currentWar.opponent;
+            currentWarAttackerTags = new Set(
+                ourClanInCurrentWar.members
+                    .filter(m => m.attacks && m.attacks.length > 0)
+                    .map(m => m.tag)
+            );
+        }
+
         const playerStats = {};
         for (const war of allWarData) {
             if (war.state !== 'inWar' && war.state !== 'warEnded') continue;
@@ -230,12 +251,11 @@ app.get('/cwl-stats', async (req, res) => {
             .map(p => {
                 p.netStars = p.stars - p.starsConceded;
                 p.avgDestruction = p.attacks > 0 ? (p.destruction / p.attacks).toFixed(2) : 0;
-                // --- NEW: Calculate average stars per attack ---
                 p.avgStars = p.attacks > 0 ? (p.stars / p.attacks).toFixed(2) : 0;
+                p.attackedInCurrentWar = currentWarAttackerTags.has(p.tag);
                 return p;
             }).sort((a, b) => b.netStars - a.netStars);
 
-        // --- NEW: Calculate clan-wide summary stats ---
         const summary = {
             totalAttacks: finalStats.reduce((sum, p) => sum + p.attacks, 0),
             totalMissedAttacks: finalStats.reduce((sum, p) => sum + p.missedAttacks, 0),
@@ -243,10 +263,10 @@ app.get('/cwl-stats', async (req, res) => {
         };
         summary.averageStars = summary.totalAttacks > 0 ? (summary.totalStars / summary.totalAttacks).toFixed(2) : 0;
 
-        // --- NEW: Send back an object with both players and summary ---
         res.json({
             players: finalStats,
-            summary: summary
+            summary: summary,
+            currentWarEndTime: currentWar ? currentWar.endTime : null
         });
 
     } catch (error) {
