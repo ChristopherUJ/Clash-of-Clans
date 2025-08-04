@@ -22,9 +22,18 @@ const DB_PATH = path.join(__dirname, 'clan_data.db');
 const db = new sqlite3.Database(DB_PATH, (err) => {
     if (err) { console.error(err.message); throw err; }
     console.log('Connected to the SQLite database.');
+
+    // --- NEW: Enable Write-Ahead Logging for better concurrency ---
+    db.run("PRAGMA journal_mode = WAL;", (err) => {
+        if (err) {
+            console.error("Failed to enable WAL mode:", err.message);
+        } else {
+            console.log("WAL mode enabled for the database.");
+        }
+    });
 });
 
-// --- NEW: Promise-based wrappers for database calls ---
+// --- Promise-based wrappers for database calls ---
 function dbGet(query, params) {
     return new Promise((resolve, reject) => {
         db.get(query, params, (err, row) => {
@@ -62,7 +71,7 @@ const findAchievementValue = (achievements, name) => {
 app.use(express.static(__dirname));
 
 // =================================================================
-//  ENDPOINT TO UPDATE DATA (Refactored with async/await)
+//  ENDPOINT TO UPDATE DATA
 // =================================================================
 app.get('/update-data', async (req, res) => {
     console.log('Starting data update process...');
@@ -121,7 +130,7 @@ app.get('/update-data', async (req, res) => {
 });
 
 // =================================================================
-//  ENDPOINTS TO SERVE CACHED DATA (Refactored with async/await)
+//  ENDPOINTS TO SERVE CACHED DATA
 // =================================================================
 app.get('/tracked-clan-data', async (req, res) => {
     try {
@@ -150,11 +159,8 @@ app.get('/player/:playerTag', async (req, res) => {
     }
 });
 
-// CWL STATS ENDPOINT (Can be refactored later if needed, but not the cause of the crash)
-// ... your existing /cwl-stats endpoint ...
+// CWL STATS ENDPOINT
 app.get('/cwl-stats', async (req, res) => {
-    // This existing CWL code is complex but already uses async/await correctly with fetch.
-    // It does not use the database, so it was not causing the crash. We can leave it as is.
     try {
         const currentClanRes = await fetch(`${COC_API_BASE_URL}/clans/%23${COC_CLAN_TAG.replace('#', '')}`, {
             headers: { 'Authorization': `Bearer ${COC_API_KEY}` }
