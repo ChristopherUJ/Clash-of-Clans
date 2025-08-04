@@ -6,7 +6,7 @@ const fetch = require('node-fetch');
 const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 80;
 
 // --- CONFIGURATION & SAFEGUARD ---
 const COC_API_KEY = process.env.COC_API_KEY;
