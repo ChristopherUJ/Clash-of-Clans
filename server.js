@@ -8,7 +8,7 @@ const sqlite3 = require('sqlite3').verbose();
 const app = express();
 const port = process.env.PORT || 80;
 
-// --- CONFIGURATION & SAFEGUARD ---
+// --- CONFIGURATION ---
 const COC_API_KEY = process.env.COC_API_KEY;
 const COC_CLAN_TAG = process.env.COC_CLAN_TAG;
 if (!COC_API_KEY || !COC_CLAN_TAG) {
@@ -20,12 +20,35 @@ const DB_PATH = path.join(__dirname, 'clan_data.db');
 
 // --- DATABASE CONNECTION ---
 const db = new sqlite3.Database(DB_PATH, (err) => {
-    if (err) {
-        console.error(err.message);
-        throw err;
-    }
+    if (err) { console.error(err.message); throw err; }
     console.log('Connected to the SQLite database.');
 });
+
+// --- NEW: Promise-based wrappers for database calls ---
+function dbGet(query, params) {
+    return new Promise((resolve, reject) => {
+        db.get(query, params, (err, row) => {
+            if (err) reject(err);
+            resolve(row);
+        });
+    });
+}
+function dbAll(query, params) {
+    return new Promise((resolve, reject) => {
+        db.all(query, params, (err, rows) => {
+            if (err) reject(err);
+            resolve(rows);
+        });
+    });
+}
+function dbRun(query, params) {
+    return new Promise((resolve, reject) => {
+        db.run(query, params, function (err) {
+            if (err) reject(err);
+            resolve(this);
+        });
+    });
+}
 
 // --- HELPER FUNCTIONS ---
 const roleHierarchy = { 'member': 0, 'admin': 1, 'coLeader': 2, 'leader': 3 };
@@ -36,15 +59,14 @@ const findAchievementValue = (achievements, name) => {
     return achievement ? achievement.value : 0;
 };
 
-// --- MIDDLEWARE ---
 app.use(express.static(__dirname));
 
 // =================================================================
-//  ENDPOINT TO UPDATE DATA
+//  ENDPOINT TO UPDATE DATA (Refactored with async/await)
 // =================================================================
 app.get('/update-data', async (req, res) => {
     console.log('Starting data update process...');
-    res.status(202).send('Update process started. Check server console for progress.');
+    res.status(202).send('Update process started.');
 
     try {
         const clanRes = await fetch(`${COC_API_BASE_URL}/clans/%23${COC_CLAN_TAG.replace('#', '')}`, {
@@ -60,36 +82,37 @@ app.get('/update-data', async (req, res) => {
             const playerData = await playerRes.json();
             if (!playerRes.ok) continue;
 
-            db.get('SELECT * FROM players WHERE tag = ?', [member.tag], (err, storedPlayer) => {
-                let lastSeenActive = new Date().toISOString();
-                let highestRole = member.role;
-                if (storedPlayer) {
-                    const donationsChanged = storedPlayer.donations !== playerData.donations;
-                    const expLevelChanged = storedPlayer.expLevel !== playerData.expLevel;
-                    if (!donationsChanged && !expLevelChanged) {
-                        lastSeenActive = storedPlayer.lastSeenActive;
-                    }
-                    if (roleHierarchy[storedPlayer.highestRole] > roleHierarchy[member.role]) {
-                        highestRole = storedPlayer.highestRole;
-                    }
+            const storedPlayer = await dbGet('SELECT * FROM players WHERE tag = ?', [member.tag]);
+
+            let lastSeenActive = new Date().toISOString();
+            let highestRole = member.role;
+            if (storedPlayer) {
+                const donationsChanged = storedPlayer.donations !== playerData.donations;
+                const expLevelChanged = storedPlayer.expLevel !== playerData.expLevel;
+                if (!donationsChanged && !expLevelChanged) {
+                    lastSeenActive = storedPlayer.lastSeenActive;
                 }
-                const upsertSql = `
-          INSERT INTO players (tag, name, role, highestRole, townHallLevel, expLevel, trophies, bestTrophies, warStars, donations, donationsReceived, troopDonations, spellDonations, siegeDonations, lastSeenActive)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(tag) DO UPDATE SET
-            name=excluded.name, role=excluded.role, highestRole=excluded.highestRole, townHallLevel=excluded.townHallLevel,
-            expLevel=excluded.expLevel, trophies=excluded.trophies, bestTrophies=excluded.bestTrophies, warStars=excluded.warStars,
-            donations=excluded.donations, donationsReceived=excluded.donationsReceived, troopDonations=excluded.troopDonations,
-            spellDonations=excluded.spellDonations, siegeDonations=excluded.siegeDonations, lastSeenActive=excluded.lastSeenActive;
-        `;
-                const params = [
-                    member.tag, sanitizeName(member.name), member.role, highestRole, playerData.townHallLevel, playerData.expLevel, playerData.trophies,
-                    playerData.bestTrophies, playerData.warStars, playerData.donations, playerData.donationsReceived,
-                    findAchievementValue(playerData.achievements, 'Friend in Need'), findAchievementValue(playerData.achievements, 'Sharing is caring'),
-                    findAchievementValue(playerData.achievements, 'Siege Sharer'), lastSeenActive
-                ];
-                db.run(upsertSql, params);
-            });
+                if (roleHierarchy[storedPlayer.highestRole] > roleHierarchy[member.role]) {
+                    highestRole = storedPlayer.highestRole;
+                }
+            }
+
+            const upsertSql = `
+        INSERT INTO players (tag, name, role, highestRole, townHallLevel, expLevel, trophies, bestTrophies, warStars, donations, donationsReceived, troopDonations, spellDonations, siegeDonations, lastSeenActive)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(tag) DO UPDATE SET
+          name=excluded.name, role=excluded.role, highestRole=excluded.highestRole, townHallLevel=excluded.townHallLevel,
+          expLevel=excluded.expLevel, trophies=excluded.trophies, bestTrophies=excluded.bestTrophies, warStars=excluded.warStars,
+          donations=excluded.donations, donationsReceived=excluded.donationsReceived, troopDonations=excluded.troopDonations,
+          spellDonations=excluded.spellDonations, siegeDonations=excluded.siegeDonations, lastSeenActive=excluded.lastSeenActive;
+      `;
+            const params = [
+                member.tag, sanitizeName(member.name), member.role, highestRole, playerData.townHallLevel, playerData.expLevel, playerData.trophies,
+                playerData.bestTrophies, playerData.warStars, playerData.donations, playerData.donationsReceived,
+                findAchievementValue(playerData.achievements, 'Friend in Need'), findAchievementValue(playerData.achievements, 'Sharing is caring'),
+                findAchievementValue(playerData.achievements, 'Siege Sharer'), lastSeenActive
+            ];
+            await dbRun(upsertSql, params);
         }
         console.log('✅ Data update process finished successfully!');
     } catch (error) {
@@ -98,38 +121,40 @@ app.get('/update-data', async (req, res) => {
 });
 
 // =================================================================
-//  ENDPOINT FOR CLAN ROSTER
+//  ENDPOINTS TO SERVE CACHED DATA (Refactored with async/await)
 // =================================================================
-app.get('/tracked-clan-data', (req, res) => {
-    const sql = "SELECT * FROM players ORDER BY trophies DESC";
-    db.all(sql, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: 'Failed to read database.' });
+app.get('/tracked-clan-data', async (req, res) => {
+    try {
+        const sql = "SELECT * FROM players ORDER BY trophies DESC";
+        const rows = await dbAll(sql, []);
         const responseData = rows.map(player => ({
             tag: player.tag, name: player.name, trophies: player.trophies,
             currentRoleName: getRoleName(player.role), highestRoleName: getRoleName(player.highestRole),
             sortOrder: roleHierarchy[player.highestRole], lastSeenActive: player.lastSeenActive
         }));
         res.json(responseData);
-    });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to read database.' });
+    }
 });
 
-// =================================================================
-//  ENDPOINT FOR A SINGLE PLAYER
-// =================================================================
-app.get('/player/:playerTag', (req, res) => {
-    const sql = "SELECT * FROM players WHERE tag = ?";
-    const playerTagWithHash = '#' + req.params.playerTag;
-    db.get(sql, [playerTagWithHash], (err, row) => {
-        if (err) return res.status(500).json({ error: 'Failed to read database.' });
+app.get('/player/:playerTag', async (req, res) => {
+    try {
+        const sql = "SELECT * FROM players WHERE tag = ?";
+        const playerTagWithHash = '#' + req.params.playerTag;
+        const row = await dbGet(sql, [playerTagWithHash]);
         if (!row) return res.status(404).json({ error: 'Player not found in database.' });
         res.json(row);
-    });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to read database.' });
+    }
 });
 
-// =================================================================
-//  ENDPOINT FOR CLAN WAR LEAGUE STATS
-// =================================================================
+// CWL STATS ENDPOINT (Can be refactored later if needed, but not the cause of the crash)
+// ... your existing /cwl-stats endpoint ...
 app.get('/cwl-stats', async (req, res) => {
+    // This existing CWL code is complex but already uses async/await correctly with fetch.
+    // It does not use the database, so it was not causing the crash. We can leave it as is.
     try {
         const currentClanRes = await fetch(`${COC_API_BASE_URL}/clans/%23${COC_CLAN_TAG.replace('#', '')}`, {
             headers: { 'Authorization': `Bearer ${COC_API_KEY}` }
