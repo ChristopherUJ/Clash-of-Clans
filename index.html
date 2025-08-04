@@ -86,16 +86,15 @@
     let allMembers = [];
     let sortState = { column: 'trophies', order: 'desc' };
 
-    // --- MODIFIED: Replaced timeAgo function with formatDateTime ---
+    // --- MODIFIED: Updated the date formatting function ---
     function formatDateTime(dateString) {
         if (!dateString) return 'Never';
         const date = new Date(dateString);
-        // Options to format the date nicely, e.g., "Aug 4, 2025, 4:10 PM"
         const options = {
-            month: 'short', day: 'numeric', year: 'numeric',
-            hour: 'numeric', minute: '2-digit', hour12: true
+            day: 'numeric', month: 'short',
+            hour: 'numeric', minute: '2-digit', hour12: false // Use 24-hour format
         };
-        return date.toLocaleString(undefined, options); // undefined uses the browser's local language and timezone
+        return date.toLocaleString('en-GB', options); // en-GB gives a common "4 Aug, 16:07" format
     }
 
     async function getTrackedData() {
@@ -138,6 +137,7 @@
         });
     }
 
+    // --- MODIFIED: Added conditional coloring logic ---
     function displayData(members) {
         const tableBody = document.getElementById('member-list');
         tableBody.innerHTML = '';
@@ -167,8 +167,20 @@
             }
             rankCell.innerHTML = rankHtml;
 
-            // MODIFIED: Use the new formatting function
             lastActiveCell.textContent = formatDateTime(member.lastSeenActive);
+
+            // Add conditional coloring based on how long ago the player was active
+            if (member.lastSeenActive) {
+                const lastActiveDate = new Date(member.lastSeenActive);
+                const now = new Date();
+                const diffDays = (now - lastActiveDate) / (1000 * 60 * 60 * 24);
+
+                if (diffDays > 7) {
+                    lastActiveCell.style.color = '#ff6b6b'; // Red
+                } else if (diffDays > 3) {
+                    lastActiveCell.style.color = '#f0ad4e'; // Orange
+                }
+            }
 
             row.appendChild(trophiesCell);
             row.appendChild(nameCell);
