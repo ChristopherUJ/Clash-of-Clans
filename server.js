@@ -169,6 +169,7 @@ app.get('/player/:playerTag', async (req, res) => {
 // CWL STATS ENDPOINT
 app.get('/cwl-stats', async (req, res) => {
     try {
+        // ... (The beginning of the function that fetches data is the same) ...
         const currentClanRes = await fetch(`${COC_API_BASE_URL}/clans/%23${COC_CLAN_TAG.replace('#', '')}`, {
             headers: { 'Authorization': `Bearer ${COC_API_KEY}` }
         });
@@ -223,13 +224,31 @@ app.get('/cwl-stats', async (req, res) => {
                 }
             }
         }
-        const finalStats = Object.values(playerStats).filter(player => currentMemberTags.has(player.tag))
+
+        const finalStats = Object.values(playerStats)
+            .filter(player => currentMemberTags.has(player.tag))
             .map(p => {
                 p.netStars = p.stars - p.starsConceded;
                 p.avgDestruction = p.attacks > 0 ? (p.destruction / p.attacks).toFixed(2) : 0;
+                // --- NEW: Calculate average stars per attack ---
+                p.avgStars = p.attacks > 0 ? (p.stars / p.attacks).toFixed(2) : 0;
                 return p;
             }).sort((a, b) => b.netStars - a.netStars);
-        res.json(finalStats);
+
+        // --- NEW: Calculate clan-wide summary stats ---
+        const summary = {
+            totalAttacks: finalStats.reduce((sum, p) => sum + p.attacks, 0),
+            totalMissedAttacks: finalStats.reduce((sum, p) => sum + p.missedAttacks, 0),
+            totalStars: finalStats.reduce((sum, p) => sum + p.stars, 0),
+        };
+        summary.averageStars = summary.totalAttacks > 0 ? (summary.totalStars / summary.totalAttacks).toFixed(2) : 0;
+
+        // --- NEW: Send back an object with both players and summary ---
+        res.json({
+            players: finalStats,
+            summary: summary
+        });
+
     } catch (error) {
         console.error("Error fetching CWL stats:", error);
         res.status(500).json({ error: "Failed to fetch CWL stats." });
