@@ -20,7 +20,10 @@ const DB_PATH = path.join(__dirname, 'clan_data.db');
 
 // --- DATABASE CONNECTION ---
 const db = new sqlite3.Database(DB_PATH, (err) => {
-    if (err) { console.error(err.message); throw err; }
+    if (err) {
+        console.error(err.message);
+        throw err;
+    }
     console.log('Connected to the SQLite database.');
 });
 
@@ -71,14 +74,14 @@ app.get('/update-data', async (req, res) => {
                     }
                 }
                 const upsertSql = `
-                    INSERT INTO players (tag, name, role, highestRole, townHallLevel, expLevel, trophies, bestTrophies, warStars, donations, donationsReceived, troopDonations, spellDonations, siegeDonations, lastSeenActive)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ON CONFLICT(tag) DO UPDATE SET
-                        name=excluded.name, role=excluded.role, highestRole=excluded.highestRole, townHallLevel=excluded.townHallLevel,
-                                                expLevel=excluded.expLevel, trophies=excluded.trophies, bestTrophies=excluded.bestTrophies, warStars=excluded.warStars,
-                                                donations=excluded.donations, donationsReceived=excluded.donationsReceived, troopDonations=excluded.troopDonations,
-                                                spellDonations=excluded.spellDonations, siegeDonations=excluded.siegeDonations, lastSeenActive=excluded.lastSeenActive;
-                `;
+          INSERT INTO players (tag, name, role, highestRole, townHallLevel, expLevel, trophies, bestTrophies, warStars, donations, donationsReceived, troopDonations, spellDonations, siegeDonations, lastSeenActive)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(tag) DO UPDATE SET
+            name=excluded.name, role=excluded.role, highestRole=excluded.highestRole, townHallLevel=excluded.townHallLevel,
+            expLevel=excluded.expLevel, trophies=excluded.trophies, bestTrophies=excluded.bestTrophies, warStars=excluded.warStars,
+            donations=excluded.donations, donationsReceived=excluded.donationsReceived, troopDonations=excluded.troopDonations,
+            spellDonations=excluded.spellDonations, siegeDonations=excluded.siegeDonations, lastSeenActive=excluded.lastSeenActive;
+        `;
                 const params = [
                     member.tag, sanitizeName(member.name), member.role, highestRole, playerData.townHallLevel, playerData.expLevel, playerData.trophies,
                     playerData.bestTrophies, playerData.warStars, playerData.donations, playerData.donationsReceived,
