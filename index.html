@@ -5,8 +5,72 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clan Members</title>
     <style>
-        /* ... existing styles ... */
-        table { max-width: 900px; } /* Widen table for new column */
+        @import url('https://fonts.googleapis.com/css2?family=Lilita+One&family=Lato&display=swap');
+        :root {
+            --coc-gold: #fde068;
+            --coc-light-text: #e0e0e0;
+            --coc-dark-panel: #111;
+        }
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #000;
+            color: var(--coc-light-text);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        h1, th {
+            font-family: 'Lilita One', cursive;
+            color: var(--coc-gold);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            letter-spacing: 1px;
+        }
+        h1 { text-align: center; }
+        .nav-link {
+            display: block; text-align: center; margin-bottom: 20px; color: #87cefa;
+            font-family: 'Lilita One', cursive; font-size: 1.2em; text-decoration: none;
+        }
+        .nav-link:hover { text-decoration: underline; }
+        #loader { text-align: center; font-size: 1.2em; }
+        table {
+            width: 100%;
+            max-width: 900px; /* Widened for the new column */
+            margin: 20px auto;
+            border-collapse: collapse;
+            background-color: var(--coc-dark-panel);
+            border: 2px solid var(--coc-gold);
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+            vertical-align: middle;
+        }
+        th { background-color: rgba(0,0,0,0.3); }
+        a { color: #87cefa; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .rank-cell span { display: block; line-height: 1.3; }
+        .rank-highest { font-size: 0.9em; }
+        .rank-current { font-size: 0.9em; color: #ff6b6b; }
+        .sortable { cursor: pointer; user-select: none; }
+        .sortable:hover { background-color: rgba(255,255,255,0.1); }
+        .sortable.sorted-asc::after { content: ' ▲'; }
+        .sortable.sorted-desc::after { content: ' ▼'; }
+        @media (max-width: 600px) {
+            body { padding: 5px; }
+            h1 { font-size: 1.8em; }
+            table { max-width: 100%; font-size: 0.9em; }
+            th, td {
+                padding: 8px 5px;
+                line-height: 1.2;
+            }
+            .player-tag {
+                display: block;
+                font-size: 0.8em;
+                color: #aaa;
+            }
+        }
     </style>
 </head>
 <body>
@@ -28,7 +92,6 @@
     let allMembers = [];
     let sortState = { column: 'trophies', order: 'desc' };
 
-    // --- NEW: Helper function to format time ---
     function timeAgo(dateString) {
         if (!dateString) return 'Never';
         const date = new Date(dateString);
@@ -59,7 +122,6 @@
         allMembers.sort((a, b) => {
             let valA, valB;
             const column = sortState.column;
-            // MODIFIED: Handle date sorting for lastSeenActive
             if (column === 'lastSeenActive') {
                 valA = new Date(a.lastSeenActive || 0);
                 valB = new Date(b.lastSeenActive || 0);
@@ -67,7 +129,7 @@
                 valA = a.name.toLowerCase(); valB = b.name.toLowerCase();
             } else if (column === 'rank') {
                 valA = a.sortOrder; valB = b.sortOrder;
-            } else {
+            } else { // trophies
                 valA = a.trophies; valB = b.trophies;
             }
             if (valA < valB) return sortState.order === 'asc' ? -1 : 1;
@@ -95,9 +157,8 @@
             const nameCell = document.createElement('td');
             const trophiesCell = document.createElement('td');
             const rankCell = document.createElement('td');
-            const lastActiveCell = document.createElement('td'); // ADDED: New cell
+            const lastActiveCell = document.createElement('td');
 
-            // ... (nameCell and trophiesCell logic is the same) ...
             const playerLink = document.createElement('a');
             playerLink.href = `/player.html?tag=${member.tag.replace('#', '')}`;
             const nameText = document.createTextNode(`${member.name} `);
@@ -107,6 +168,7 @@
             playerLink.appendChild(nameText);
             playerLink.appendChild(tagSpan);
             nameCell.appendChild(playerLink);
+
             trophiesCell.textContent = member.trophies.toLocaleString();
 
             rankCell.classList.add('rank-cell');
@@ -116,13 +178,12 @@
             }
             rankCell.innerHTML = rankHtml;
 
-            // ADDED: Populate last active cell
             lastActiveCell.textContent = timeAgo(member.lastSeenActive);
 
             row.appendChild(trophiesCell);
             row.appendChild(nameCell);
             row.appendChild(rankCell);
-            row.appendChild(lastActiveCell); // ADDED: Add new cell to row
+            row.appendChild(lastActiveCell);
             tableBody.appendChild(row);
         });
         document.getElementById('loader').style.display = 'none';
@@ -135,9 +196,7 @@
             if (sortState.column === column) {
                 sortState.order = sortState.order === 'asc' ? 'desc' : 'asc';
             } else {
-                sortState.column = column;
-                sortState.order = (column === 'name' || column === 'lastSeenActive') ? 'desc' : 'asc';
-                if (column !== 'name') sortState.order = 'desc';
+                sortState.column = (column === 'name') ? 'asc' : 'desc';
             }
             renderTable();
         });
